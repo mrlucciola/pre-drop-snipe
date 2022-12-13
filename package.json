@@ -2,7 +2,6 @@
   "name": "pre-drop-snipe",
   "version": "0.1.0",
   "description": "Calculates token rarities for a given drop. Ingestion pipeline with rarity ranking algo.",
-  "main": "index.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "prepare": "husky install"
