@@ -1,0 +1,28 @@
+{
+  "name": "pre-drop-snipe",
+  "version": "0.1.0",
+  "description": "Calculates token rarities for a given drop. Ingestion pipeline with rarity ranking algo.",
+  "main": "index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepare": "husky install"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mrlucciola/pre-drop-snipe.git"
+  },
+  "keywords": [
+    "Golang"
+  ],
+  "author": "Rocco Lucciola (@mrlucciola)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mrlucciola/pre-drop-snipe/issues"
+  },
+  "homepage": "https://github.com/mrlucciola/pre-drop-snipe#readme",
+  "devDependencies": {
+    "@commitlint/cli": "^17.3.0",
+    "@commitlint/config-conventional": "^17.3.0",
+    "husky": "^8.0.2"
+  }
+}
