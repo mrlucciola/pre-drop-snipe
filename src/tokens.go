@@ -33,14 +33,34 @@ func getToken(collectionSlug string, tokenId int) *Token {
 	traits := make(map[string]string)
 	json.Unmarshal(body, &traits)
 
-	for traitType, traitTypeOccurrence := range traits {
-		fmt.Println("traitType:", traitType, "occurrence:", traitTypeOccurrence)
-	}
-
 	return &Token{
 		id:     tokenId,
 		traits: traits,
 	}
+}
+
+// Retrieve all tokens for a given collection
+//
+// 1. Get the amount of total available tokens from OpenSea collection stats
+//
+// 2. Iterate through this range to get the collection's tokens
+func getTokens(collectionSlug string, tokenCt int) Tokens {
+	tokenArr := make(Tokens, tokenCt)
+
+	for tokenId := 0; tokenId < tokenCt; tokenId++ {
+		// log the token
+		logger.Println(string(COLOR_GREEN), fmt.Sprintf("Getting token %d", tokenId), string(COLOR_RESET))
+		token := getToken(collectionSlug, tokenId)
+		// add to the array
+		tokenArr[tokenId] = token
+
+		// log token traits
+		for traitType, traitTypeOccurrence := range token.traits {
+			fmt.Println("traitType:", traitType, "occurrence:", traitTypeOccurrence)
+		}
+	}
+
+	return tokenArr
 }
 
 type Token struct {
