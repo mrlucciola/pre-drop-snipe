@@ -8,28 +8,27 @@ import (
 	"testing"
 )
 
-func TestRetrieveCollection(t *testing.T) {
+// Check if the output has the same fields as input
+func TestBuildTraitMap(t *testing.T) {
 	// Load file
-	filename := "../test/traits_asuki.json"
+	filename := "../test/trait_prob_asuki.json"
 	content, err := os.ReadFile(filename)
 	if err != nil {
 		log.Fatal("Error when opening file: ", err)
 	}
 
 	// Deserialize data from the JSON file
-	var traitMap = CollectionTraits{}
-	errUnmarshal := json.Unmarshal(content, &traitMap)
+	var expected = TraitStats{}
+	errUnmarshal := json.Unmarshal(content, &expected)
 	if errUnmarshal != nil {
 		t.Errorf("Failed ! unmarshalling json")
 	}
 
-	expected := CollectionPayload{
-		Traits: traitMap,
-		Count:  73750,
-	}
-
+	// get collection
 	client := httpClient()
-	output := getOsCollection(client, "we-asuki")
+	res := getOsCollection(client, "we-asuki")
+	// get trait-prob-map
+	output := getAllTraitStats(res.Traits, int(res.Count))
 
 	if reflect.DeepEqual(expected, output) == false {
 

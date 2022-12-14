@@ -32,9 +32,11 @@ func getOsCollection(client *http.Client, collectionSlug string) CollectionPaylo
 	}
 }
 
+type CollectionTraits map[string]TraitCategory
+
 // Reformatted Collection response body for readability
 type CollectionPayload struct {
-	Traits map[string]map[string]int
+	Traits CollectionTraits
 	Count  float64
 }
 
@@ -43,7 +45,7 @@ type CollectionPayload struct {
 // Only includes relevant properties.
 type collectionResponse struct {
 	Collection struct {
-		Traits map[string]map[string]int
+		Traits CollectionTraits
 		Stats  struct {
 			Count float64
 		}
