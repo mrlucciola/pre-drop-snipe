@@ -2,8 +2,8 @@ package main
 
 import "log"
 
-// https://opensea.io/collection/mutant-ape-yacht-club
-var collectionSlug = "mutant-ape-yacht-club"
+// https://opensea.io/collection/azuki1
+var collectionSlug = "azuki1"
 
 func main() {
 	client := httpClient()

@@ -1,6 +1,6 @@
 package main
 
-type Token struct {
+type Token_ struct {
 	id    int
 	attrs map[string]string
 }
