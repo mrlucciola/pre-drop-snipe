@@ -1,9 +1,5 @@
 package main
 
-import (
-	"fmt"
-)
-
 // Calculate the probability for all types of a single trait
 //
 //	ex. Mouth: {
@@ -32,20 +28,17 @@ func getTraitStats(traitCategory TraitCategory, activeTokenCount int) TraitCateg
 	for _, traitValueOccurrence := range traitCategory {
 		traitOccurrenceSum += traitValueOccurrence
 	}
-	fmt.Println("Total: ", activeTokenCount, "sum: ", traitOccurrenceSum)
+	// fmt.Println("Total: ", activeTokenCount, "sum: ", traitOccurrenceSum)
 	// validate this sum equals the number of active tokens
-	//
 	// if traitOccurrenceSum != activeTokenCount {
 	// 	logger.Panic("Trait counts do not line up")
 	// }
-	// default return
 
 	traitCategoryProb := TraitCategoryProb{}
 	// now that we have the sum, apply probability to each trait value
 	for traitValue, traitValueOccurrence := range traitCategory {
 		prob := float64(traitValueOccurrence) / float64(traitOccurrenceSum)
 		traitCategoryProb[traitValue] = prob
-		fmt.Println("prob:", traitCategoryProb[traitValue], " = ", traitValueOccurrence, "/", traitOccurrenceSum, "trait:", traitValue)
 	}
 	return traitCategoryProb
 }
@@ -54,10 +47,8 @@ func getAllTraitStats(traits CollectionTraits, activeTokenCount int) TraitStats 
 
 	// parallelize
 	for key, item := range traits {
-		fmt.Println("\n\nKey: ", key)
 		traitStats[key] = getTraitStats(item, int(activeTokenCount))
 	}
 
-	// default return
 	return traitStats
 }
