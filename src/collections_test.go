@@ -2,9 +2,8 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
-	"io/ioutil"
 	"log"
+	"os"
 	"reflect"
 	"testing"
 )
@@ -12,13 +11,13 @@ import (
 func TestRetrieveCollection(t *testing.T) {
 	// Load file
 	filename := "../test/traits_asuki.json"
-	content, err := ioutil.ReadFile(filename)
+	content, err := os.ReadFile(filename)
 	if err != nil {
 		log.Fatal("Error when opening file: ", err)
 	}
 
 	// Deserialize data from the JSON file
-	var traitMap = map[string]map[string]int{}
+	var traitMap = CollectionTraits{}
 	errUnmarshal := json.Unmarshal(content, &traitMap)
 	if errUnmarshal != nil {
 		t.Errorf("Failed ! unmarshalling json")
@@ -34,9 +33,7 @@ func TestRetrieveCollection(t *testing.T) {
 
 	if reflect.DeepEqual(expected, output) == false {
 
-		fmt.Println("EEE:\n", expected, "\n ")
-		fmt.Println("OOO:\n", output, "\n ")
-		t.Errorf("Failed ! \nexp: \n%v \nout: \n%v", 1, 2)
+		t.Errorf("Failed ! \nexp: \n%v \nout: \n%v", expected, output)
 	} else {
 		t.Logf("Success !")
 	}

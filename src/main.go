@@ -1,7 +1,5 @@
 package main
 
-import "fmt"
-
 // https://opensea.io/collection/azuki1
 var collectionSlug = "we-asuki"
 var tokenSlug = "azuki1"
@@ -15,7 +13,7 @@ func main() {
 	client := httpClient()
 	res := getOsCollection(client, collectionSlug)
 
-	fmt.Println("token ct:", res.Count)
+	getAllTraitStats(res.Traits, int(res.Count))
 
-	getTokens(tokenSlug, int(2))
+	// getTokens(tokenSlug, int(2))
 }
