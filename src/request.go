@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -38,17 +37,4 @@ func sendGetRequest(client *http.Client, endpoint string) []byte {
 	}
 
 	return body
-}
-
-// Query OpenSea's api and get information about the collection and sales
-func getOsCollection(client *http.Client, collectionSlug string) []byte {
-	// base url for the OpenSea API
-	baseUrlOs := "https://api.opensea.io/api/v1/collection"
-
-	// OpenSea API endpoint
-	endpointOs := fmt.Sprintf("%v/%v", baseUrlOs, collectionSlug)
-
-	// build and send the request
-	resJson := sendGetRequest(client, endpointOs)
-	return resJson
 }
