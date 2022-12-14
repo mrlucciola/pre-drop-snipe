@@ -9,4 +9,6 @@ func main() {
 	client := httpClient()
 	res := getOsCollection(client, collectionSlug)
 	log.Println("Res body:", string(res))
+
+	getToken(collectionSlug, 0)
 }
