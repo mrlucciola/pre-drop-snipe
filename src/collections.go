@@ -15,36 +15,37 @@ func getOsCollection(client *http.Client, collectionSlug string) CollectionPaylo
 	// OpenSea API endpoint
 	endpointOs := fmt.Sprintf("%v/%v", baseUrlOs, collectionSlug)
 
-	// build and send the request
+	// Build and send the request
+	logger.Println(string(COLOR_YELLOW), fmt.Sprintf("Getting collection `%s`", collectionSlug), string(COLOR_RESET))
 	res := sendGetRequest(client, endpointOs)
+	logger.Println(string(COLOR_GREEN), fmt.Sprintf("Success: retrieved collection `%s`", collectionSlug), string(COLOR_RESET))
 
-	// deserialize response and handle errors
+	// Deserialize response and handle errors
 	var collectionRes collectionResponse
 	if err := json.Unmarshal(res, &collectionRes); err != nil {
 		log.Fatal("Error deserializing data")
 	}
 
 	return CollectionPayload{
-		Traits:      collectionRes.Collection.Traits,
-		TotalSupply: collectionRes.Collection.Stats.TotalSupply,
-		Count:       collectionRes.Collection.Stats.Count,
+		Traits: collectionRes.Collection.Traits,
+		Count:  collectionRes.Collection.Stats.Count,
 	}
 }
 
-// Reformatted Collection response body
+// Reformatted Collection response body for readability
 type CollectionPayload struct {
-	Traits      map[string]map[string]int
-	TotalSupply float64
-	Count       float64
+	Traits map[string]map[string]int
+	Count  float64
 }
 
-// Raw collection response format
+// Body of the OpenSea API response for `collection`.
+//
+// Only includes relevant properties.
 type collectionResponse struct {
 	Collection struct {
 		Traits map[string]map[string]int
 		Stats  struct {
-			TotalSupply float64
-			Count       float64
+			Count float64
 		}
 	}
 }

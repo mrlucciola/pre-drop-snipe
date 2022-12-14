@@ -32,20 +32,32 @@ func TestRetrieveTokens(t *testing.T) {
 		&Token{
 			id: 0,
 			traits: map[string]string{
+				"Background": "Off White A",
 				"Clothing":   "Pink Oversized Kimono",
 				"Eyes":       "Striking",
 				"Offhand":    "Monkey King Staff",
 				"Type":       "Human",
 				"Hair":       "Water",
 				"Mouth":      "Frown",
-				"Background": "Off White A",
+			},
+		},
+		&Token{
+			id: 0,
+			traits: map[string]string{
+				"Background": "Off White D",
+				"Clothing":   "White Qipao with Fur",
+				"Eyes":       "Daydreaming",
+				"Offhand":    "Gloves",
+				"Type":       "Human",
+				"Hair":       "Pink Hairband",
+				"Mouth":      "Lipstick",
 			},
 		},
 	}
 
-	output := getToken("azuki1", 0)
+	output := getTokens("azuki1", 2)
 
-	if reflect.DeepEqual(false, output) {
+	if reflect.DeepEqual(expected, output) {
 		t.Errorf("Failed ! got %v want %v", output, expected)
 	} else {
 		t.Logf("Success !")

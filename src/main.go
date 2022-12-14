@@ -6,21 +6,16 @@ import "fmt"
 var collectionSlug = "we-asuki"
 var tokenSlug = "azuki1"
 
+const COLOR_YELLOW = "\033[33m"
+const COLOR_GREEN = "\033[32m"
+const COLOR_RED = "\033[31m"
+const COLOR_RESET = "\033[0m"
+
 func main() {
-	// getTokens_(Collection_{
-	// 	count: 10000,
-	// 	url:   "azuki1",
-	// })
 	client := httpClient()
 	res := getOsCollection(client, collectionSlug)
 
-	// fmt.Println("res", res)
 	fmt.Println("token ct:", res.Count)
 
 	getTokens(tokenSlug, int(2))
-	// fmt.Println("done")
-	// for i := 0; i < len(tokenArr); i++ {
-
-	// }
-	// logger.Println(tokenArr)
 }
