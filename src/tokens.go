@@ -4,14 +4,85 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"net/http"
 )
 
 const baseUrlToken = "https://go-challenge.skip.money"
 
+// We do not put the rarity on this class because it updates everytime a new token is minted.
+// Use lookup table to find rarity.
 type Token struct {
 	id     int
 	traits map[string]string
+}
+
+func (thisToken Token) lookupRarity(tokenRarityArr []float64) float64 {
+	return tokenRarityArr[thisToken.id]
+}
+
+// get the rank - lower probability = higher rank
+// unoptomized
+func calcRankBF(searchValue float64, tokenRarityArr []float64) int {
+	rank := 1
+
+	for idx := 0; idx < len(tokenRarityArr); idx++ {
+		lookupValue := tokenRarityArr[idx]
+		// handle duplicates
+		if lookupValue != searchValue && lookupValue < searchValue {
+			rank++
+		}
+
+	}
+	return rank
+}
+
+// get the rank - lower probability = lower index order (i.e. higher rank)
+// optimized using 2 pointers
+// TODO: parallelize
+func calcRankOpt(searchValue float64, tokenRarityArr []float64) int {
+	rank := 1
+	arrLen := len(tokenRarityArr)
+	isOdd := arrLen%2 != 0
+	arrEndIdx := int(math.Floor(float64(arrLen) / 2.))
+
+	p2 := arrLen
+	for p1 := 0; p1 < arrEndIdx; p1++ {
+		p2--
+
+		if tokenRarityArr[p1] != searchValue && tokenRarityArr[p1] < searchValue {
+			rank++
+		}
+		if tokenRarityArr[p2] != searchValue && tokenRarityArr[p2] < searchValue {
+			rank++
+		}
+	}
+
+	// if arr length is not even, eval the middle arr item
+	if isOdd {
+		if tokenRarityArr[arrEndIdx+1] != searchValue && tokenRarityArr[arrEndIdx+1] < searchValue {
+			rank++
+		}
+	}
+
+	return rank
+}
+
+// Sort the array and search for the index (i.e. rank) using the rarity value.
+//
+// All algos in the go::sort package are `O(n log n)`
+//
+// With how the data stores are designed:
+//   - Regardless of whether the array is presorted or not, there will always be a O(n) lookup.
+func (thisToken Token) lookupRarityRank(tokenRarityArr []float64) int {
+	// get the the rarity value
+	searchValue := roundFloat(thisToken.lookupRarity(tokenRarityArr), 15)
+
+	rank := calcRankBF(searchValue, tokenRarityArr)
+	rank2 := calcRankOpt(searchValue, tokenRarityArr)
+
+	fmt.Println("value:", searchValue, "    rank 1:", rank, "rank2:", rank2)
+	return rank
 }
 
 // Makes GET request to Skip's servers, retrieves asset
@@ -46,7 +117,7 @@ func getToken(collectionSlug string, tokenId int) *Token {
 
 // Retrieve all tokens for a given collection
 //
-// 1. Get the amount of total available tokens from OpenSea collection stats
+// 1. Get the amount of total available tokens (normally would be from OpenSea collection stats)
 //
 // 2. Iterate through this range to get the collection's tokens
 func getTokens(collectionSlug string, tokenCt int) []*Token {
@@ -58,11 +129,6 @@ func getTokens(collectionSlug string, tokenCt int) []*Token {
 		token := getToken(collectionSlug, tokenId)
 		// add to the array
 		tokenArr[tokenId] = token
-
-		// DELETE: log token traits
-		for traitType, traitTypeOccurrence := range token.traits {
-			fmt.Println("traitType:", traitType, "occurrence:", traitTypeOccurrence)
-		}
 	}
 
 	return tokenArr
