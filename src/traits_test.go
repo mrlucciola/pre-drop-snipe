@@ -18,7 +18,7 @@ func TestBuildTraitMap(t *testing.T) {
 	}
 
 	// Deserialize data from the JSON file
-	var expected = TraitStats{}
+	var expected = TraitProbabilityMap{}
 	errUnmarshal := json.Unmarshal(content, &expected)
 	if errUnmarshal != nil {
 		t.Errorf("Failed ! unmarshalling json")
@@ -28,7 +28,7 @@ func TestBuildTraitMap(t *testing.T) {
 	client := httpClient()
 	res := getOsCollection(client, "we-asuki")
 	// get trait-prob-map
-	output := getAllTraitStats(res.Traits, int(res.Count))
+	output := calcAllTraitValueProbs(res.Traits, int(res.Count))
 
 	if reflect.DeepEqual(expected, output) == false {
 

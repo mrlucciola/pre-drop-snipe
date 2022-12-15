@@ -32,7 +32,7 @@ func getOsCollection(client *http.Client, collectionSlug string) CollectionPaylo
 	}
 }
 
-type CollectionTraits map[string]TraitValueMap
+type CollectionTraits map[string]TraitValueDistMap
 
 // Reformatted Collection response body for readability
 type CollectionPayload struct {

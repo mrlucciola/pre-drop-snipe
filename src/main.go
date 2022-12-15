@@ -14,6 +14,15 @@ func main() {
 	// res := getOsCollection(client, collectionSlug)
 
 	tokens := getTokens(tokenSlug, int(10))
+	tokenRarityArr := make([]float64, len(tokens))
 
-	getAllTraitStatsSkip(tokens, int(10))
+	probMap := getAllTraitStatsSkip(tokens, len(tokens))
+
+	for _, token := range tokens {
+		calculateRarity(*token, probMap, tokenRarityArr)
+	}
+
+	for _, token := range tokens {
+		token.lookupRarityRank(tokenRarityArr)
+	}
 }
