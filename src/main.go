@@ -17,7 +17,10 @@ func main() {
 
 	// retrieve tokens from server
 	// tokens := getTokens(tokenSlug, int(10))
-	tokens := getTokensConcurrently(tokenSlug, int(10))
+	// tokens := getTokensConcurrently(tokenSlug, 10000)
+	tokens := make([]Token, 500)
+	getTokensConcurrently(tokenSlug, tokens)
+	// fmt.Println(tokens[:10])
 
 	// create probability map
 	probMap := buildTraitProbabilityMap(tokens, len(tokens))

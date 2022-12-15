@@ -34,10 +34,10 @@ func calculateTokenRarity(tokenToEval Token, probabilityMap TraitProbabilityMap,
 // # Returns array of token rarities, in the order indexible by token.id
 //
 // Array is not sorted
-func calculateTokensRarity(tokensToEval []*Token, probabilityMap TraitProbabilityMap) []TokenRarity {
+func calculateTokensRarity(tokensToEval []Token, probabilityMap TraitProbabilityMap) []TokenRarity {
 	tokenRarityArr := make([]TokenRarity, len(tokensToEval))
 	for _, token := range tokensToEval {
-		calculateTokenRarity(*token, probabilityMap, tokenRarityArr)
+		calculateTokenRarity(token, probabilityMap, tokenRarityArr)
 	}
 
 	return tokenRarityArr

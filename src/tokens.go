@@ -17,6 +17,7 @@ const baseUrlToken = "https://go-challenge.skip.money"
 type Token struct {
 	id     int
 	traits map[string]string
+	// traits sync.Map
 }
 
 func (thisToken Token) lookupRarity(tokenRarityArr []TokenRarity) float64 {
@@ -79,17 +80,14 @@ func calcRankOpt(searchValue float64, tokenRarityArr []TokenRarity) int {
 func (thisToken Token) lookupRarityRank(tokenRarityArr []TokenRarity) int {
 	// get the the rarity value
 	searchValue := roundFloat(thisToken.lookupRarity(tokenRarityArr), 15)
+	rank := calcRankOpt(searchValue, tokenRarityArr)
 
-	rank := calcRankBF(searchValue, tokenRarityArr)
-	rank2 := calcRankOpt(searchValue, tokenRarityArr)
-
-	fmt.Println("value:", searchValue, "    rank 1:", rank, "rank2:", rank2)
 	return rank
 }
 
 // Makes GET request to Skip's servers, retrieves asset
 // From the stub script
-func getToken(collectionSlug string, tokenId int) *Token {
+func getToken(collectionSlug string, tokenId int) Token {
 	// build the endpoint string
 	url := fmt.Sprintf("%s/%s/%d.json", baseUrlToken, collectionSlug, tokenId)
 
@@ -99,19 +97,20 @@ func getToken(collectionSlug string, tokenId int) *Token {
 	// handle res
 	if err != nil {
 		logger.Println(string(COLOR_RED), fmt.Sprintf("Error getting token %d :", tokenId), err, string(COLOR_RESET))
-		return &Token{}
+		return Token{}
 	}
 	defer res.Body.Close()
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		logger.Println(string(COLOR_RED), fmt.Sprintf("Error reading response for token %d :", tokenId), err, string(COLOR_RESET))
-		return &Token{}
+		return Token{}
 	}
 
 	traits := make(map[string]string)
+	// var traits sync.Map
 	json.Unmarshal(body, &traits)
 
-	return &Token{
+	return Token{
 		id:     tokenId,
 		traits: traits,
 	}
@@ -122,8 +121,8 @@ func getToken(collectionSlug string, tokenId int) *Token {
 // 1. Get the amount of total available tokens (normally would be from OpenSea collection stats)
 //
 // 2. Iterate through this range to get the collection's tokens
-func getTokens(collectionSlug string, tokenCt int) []*Token {
-	tokenArr := make([]*Token, tokenCt)
+func getTokens(collectionSlug string, tokenCt int) []Token {
+	tokenArr := make([]Token, tokenCt)
 
 	for tokenId := 0; tokenId < tokenCt; tokenId++ {
 		// log the token
@@ -135,12 +134,14 @@ func getTokens(collectionSlug string, tokenCt int) []*Token {
 
 	return tokenArr
 }
-func getTokensConcurrently(collectionSlug string, tokenCt int) []*Token {
+
+// func getTokensConcurrently(collectionSlug string, tokenCt int) []Token {
+func getTokensConcurrently(collectionSlug string, tokenArr []Token) {
 	wg := sync.WaitGroup{}
 
-	tokenArr := make([]*Token, tokenCt)
+	// tokenArr := make([]Token, tokenCt)
 
-	for tokenId := 0; tokenId < tokenCt; tokenId++ {
+	for tokenId := 0; tokenId < len(tokenArr); tokenId++ {
 		wg.Add(1)
 
 		go func(tid int) {
@@ -150,8 +151,10 @@ func getTokensConcurrently(collectionSlug string, tokenCt int) []*Token {
 			// add to the array
 			tokenArr[tid] = token
 
+			wg.Done()
 		}(tokenId)
 	}
+	wg.Wait()
 
-	return tokenArr
+	// return tokenArr
 }
