@@ -10,10 +10,10 @@ const COLOR_RED = "\033[31m"
 const COLOR_RESET = "\033[0m"
 
 func main() {
-	client := httpClient()
-	res := getOsCollection(client, collectionSlug)
+	// client := httpClient()
+	// res := getOsCollection(client, collectionSlug)
 
-	getAllTraitStats(res.Traits, int(res.Count))
+	tokens := getTokens(tokenSlug, int(10))
 
-	// getTokens(tokenSlug, int(2))
+	getAllTraitStatsSkip(tokens, int(10))
 }

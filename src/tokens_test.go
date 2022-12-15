@@ -28,7 +28,7 @@ func TestRetrieveToken(t *testing.T) {
 }
 
 func TestRetrieveTokens(t *testing.T) {
-	expected := Tokens{
+	expected := []*Token{
 		&Token{
 			id: 0,
 			traits: map[string]string{

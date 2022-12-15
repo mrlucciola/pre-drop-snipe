@@ -1,5 +1,9 @@
 package main
 
+import (
+	"fmt"
+)
+
 // Calculate the probability for all types of a single trait
 //
 //	ex. Mouth: {
@@ -15,13 +19,13 @@ package main
 //	  "m1 bored unshaven": 0.3087,
 //	  "m1 dumbfounded": 0.1025,
 //	}
-type TraitCategory map[string]int
+type TraitValueMap map[string]int
 type TraitCategoryProb map[string]float64
 
 // Stats for all traits
-type TraitStats map[string]TraitCategoryProb
+type TraitProbabilityMap map[string]TraitCategoryProb
 
-func getTraitStats(traitCategory TraitCategory, activeTokenCount int) TraitCategoryProb {
+func getTraitStats(traitCategory TraitValueMap, activeTokenCount int) TraitCategoryProb {
 	// get sum of all occurences
 	var traitOccurrenceSum int
 	// m1 dumbfounded + m2 bored + m1 bored + m1 bored unshaven...
@@ -42,8 +46,10 @@ func getTraitStats(traitCategory TraitCategory, activeTokenCount int) TraitCateg
 	}
 	return traitCategoryProb
 }
-func getAllTraitStats(traits CollectionTraits, activeTokenCount int) TraitStats {
-	traitStats := TraitStats{}
+
+// OpenSea input
+func getAllTraitStats(traits CollectionTraits, activeTokenCount int) TraitProbabilityMap {
+	traitStats := TraitProbabilityMap{}
 
 	// parallelize
 	for key, item := range traits {
@@ -51,4 +57,65 @@ func getAllTraitStats(traits CollectionTraits, activeTokenCount int) TraitStats 
 	}
 
 	return traitStats
+}
+
+type TraitOccurenceMap map[string]TraitValueMap
+
+// type TraitOccurenceArr []struct {
+// 	string
+// 	TraitValueMap
+// }
+
+/*
+
+Token { category1: trait_1x, category2: trait_2x }
+
+[
+	{cat: "CLOTHING", [{red: 11}, {blue: 5}, {green: 8}]}
+]
+
+*/
+
+/*
+Iterate through the list of tokens pulled from the Skip Protocol API
+  - Input is `Token` array - from Skip Protocol API
+*/
+func getAllTraitStatsSkip(tokenArr []*Token, activeTokenCount int) TraitProbabilityMap {
+	traitProbabilities := TraitProbabilityMap{}
+	traitOccurences := TraitOccurenceMap{}
+
+	// parallelize if possible
+	for _, token := range tokenArr {
+
+		// iterate thru the traits, add occurences to the map
+		for traitCategory, traitValue := range token.traits {
+			if _, found := traitOccurences[traitCategory]; !found {
+				traitOccurences[traitCategory] = TraitValueMap{}
+			}
+
+			traitOccurences[traitCategory][traitValue] += 1
+		}
+	}
+
+	// parallelize if possible
+	for traitCategory, traitValueMap := range traitOccurences {
+		// sum all value counts for the category
+		categorySum := 0
+		for _, valueCt := range traitValueMap {
+			categorySum += valueCt
+		}
+
+		// handle empty properties
+		if _, found := traitProbabilities[traitCategory]; !found {
+			traitProbabilities[traitCategory] = TraitCategoryProb{}
+		}
+
+		// iter thru each value, divide to get prob for each value, assign to map
+		for traitValue, valueCt := range traitValueMap {
+			traitProbabilities[traitCategory][traitValue] = float64(valueCt) / float64(categorySum)
+		}
+	}
+
+	fmt.Println(traitProbabilities)
+	return traitProbabilities
 }

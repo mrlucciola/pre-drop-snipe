@@ -9,6 +9,11 @@ import (
 
 const baseUrlToken = "https://go-challenge.skip.money"
 
+type Token struct {
+	id     int
+	traits map[string]string
+}
+
 // Makes GET request to Skip's servers, retrieves asset
 // From the stub script
 func getToken(collectionSlug string, tokenId int) *Token {
@@ -44,8 +49,8 @@ func getToken(collectionSlug string, tokenId int) *Token {
 // 1. Get the amount of total available tokens from OpenSea collection stats
 //
 // 2. Iterate through this range to get the collection's tokens
-func getTokens(collectionSlug string, tokenCt int) Tokens {
-	tokenArr := make(Tokens, tokenCt)
+func getTokens(collectionSlug string, tokenCt int) []*Token {
+	tokenArr := make([]*Token, tokenCt)
 
 	for tokenId := 0; tokenId < tokenCt; tokenId++ {
 		// log the token
@@ -54,7 +59,7 @@ func getTokens(collectionSlug string, tokenCt int) Tokens {
 		// add to the array
 		tokenArr[tokenId] = token
 
-		// log token traits
+		// DELETE: log token traits
 		for traitType, traitTypeOccurrence := range token.traits {
 			fmt.Println("traitType:", traitType, "occurrence:", traitTypeOccurrence)
 		}
@@ -62,10 +67,3 @@ func getTokens(collectionSlug string, tokenCt int) Tokens {
 
 	return tokenArr
 }
-
-type Token struct {
-	id     int
-	traits map[string]string
-}
-
-type Tokens []*Token
