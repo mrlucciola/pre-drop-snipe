@@ -1,4 +1,34 @@
-# Assignment
+# About
+
+This application calculates the rarity of collectible NFTs (probability of tokens, provided their attributes) relative to all other NFTs within the same collection.
+
+This application performs two main tasks:
+
+1. Fetch all tokens of a single collection from a single source (Skip Protocol's database at the time of writing)
+1. Calculate probabilities/rarities for each token relative to the rest of the collection
+
+________________________________
+
+## Running this code
+
+1. Navigate to repository home directory\
+   `cd ~/path_to_repo/`
+1. Run command: `go run ./src`
+
+Docker deployment soon.
+
+________________________________
+
+## Environment
+
+| software    | command          | version                 |
+| ----------- | ---------------- | ----------------------- |
+| macOS       | `About this Mac` | `Ventura 13.0.1`        |
+| Go (Golang) | `go version`     | `go1.19.4 darwin/amd64` |
+
+________________________________
+
+## Assignment
 
 ### Goal:
 
