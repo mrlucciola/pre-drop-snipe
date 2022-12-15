@@ -16,7 +16,8 @@ func main() {
 	// res := getOsCollection(client, collectionSlug)
 
 	// retrieve tokens from server
-	tokens := getTokens(tokenSlug, int(10))
+	// tokens := getTokens(tokenSlug, int(10))
+	tokens := getTokensConcurrently(tokenSlug, int(10))
 
 	// create probability map
 	probMap := buildTraitProbabilityMap(tokens, len(tokens))

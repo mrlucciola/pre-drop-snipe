@@ -3,9 +3,10 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math"
 	"net/http"
+	"sync"
 )
 
 const baseUrlToken = "https://go-challenge.skip.money"
@@ -101,7 +102,7 @@ func getToken(collectionSlug string, tokenId int) *Token {
 		return &Token{}
 	}
 	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		logger.Println(string(COLOR_RED), fmt.Sprintf("Error reading response for token %d :", tokenId), err, string(COLOR_RESET))
 		return &Token{}
@@ -130,6 +131,26 @@ func getTokens(collectionSlug string, tokenCt int) []*Token {
 		token := getToken(collectionSlug, tokenId)
 		// add to the array
 		tokenArr[tokenId] = token
+	}
+
+	return tokenArr
+}
+func getTokensConcurrently(collectionSlug string, tokenCt int) []*Token {
+	wg := sync.WaitGroup{}
+
+	tokenArr := make([]*Token, tokenCt)
+
+	for tokenId := 0; tokenId < tokenCt; tokenId++ {
+		wg.Add(1)
+
+		go func(tid int) {
+			// log the token
+			logger.Println(string(COLOR_GREEN), fmt.Sprintf("Getting token %d", tid), string(COLOR_RESET))
+			token := getToken(collectionSlug, tid)
+			// add to the array
+			tokenArr[tid] = token
+
+		}(tokenId)
 	}
 
 	return tokenArr
