@@ -21,7 +21,7 @@ func getOsCollection(client *http.Client, collectionSlug string) CollectionPaylo
 	logger.Println(string(COLOR_GREEN), fmt.Sprintf("Success: retrieved collection `%s`", collectionSlug), string(COLOR_RESET))
 
 	// Deserialize response and handle errors
-	var collectionRes collectionResponse
+	var collectionRes CollectionResponse
 	if err := json.Unmarshal(res, &collectionRes); err != nil {
 		log.Fatal("Error deserializing data")
 	}
@@ -32,20 +32,18 @@ func getOsCollection(client *http.Client, collectionSlug string) CollectionPaylo
 	}
 }
 
-type CollectionTraits map[string]TraitValueDistMap
-
 // Reformatted Collection response body for readability
 type CollectionPayload struct {
-	Traits CollectionTraits
+	Traits TraitFrequencyMap
 	Count  float64
 }
 
 // Body of the OpenSea API response for `collection`.
 //
 // Only includes relevant properties.
-type collectionResponse struct {
+type CollectionResponse struct {
 	Collection struct {
-		Traits CollectionTraits
+		Traits TraitFrequencyMap
 		Stats  struct {
 			Count float64
 		}

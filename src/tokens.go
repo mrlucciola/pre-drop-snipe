@@ -11,23 +11,24 @@ import (
 const baseUrlToken = "https://go-challenge.skip.money"
 
 // We do not put the rarity on this class because it updates everytime a new token is minted.
+//
 // Use lookup table to find rarity.
 type Token struct {
 	id     int
 	traits map[string]string
 }
 
-func (thisToken Token) lookupRarity(tokenRarityArr []float64) float64 {
-	return tokenRarityArr[thisToken.id]
+func (thisToken Token) lookupRarity(tokenRarityArr []TokenRarity) float64 {
+	return tokenRarityArr[thisToken.id].rarity
 }
 
 // get the rank - lower probability = higher rank
 // unoptomized
-func calcRankBF(searchValue float64, tokenRarityArr []float64) int {
+func calcRankBF(searchValue float64, tokenRarityArr []TokenRarity) int {
 	rank := 1
 
 	for idx := 0; idx < len(tokenRarityArr); idx++ {
-		lookupValue := tokenRarityArr[idx]
+		lookupValue := tokenRarityArr[idx].rarity
 		// handle duplicates
 		if lookupValue != searchValue && lookupValue < searchValue {
 			rank++
@@ -40,7 +41,7 @@ func calcRankBF(searchValue float64, tokenRarityArr []float64) int {
 // get the rank - lower probability = lower index order (i.e. higher rank)
 // optimized using 2 pointers
 // TODO: parallelize
-func calcRankOpt(searchValue float64, tokenRarityArr []float64) int {
+func calcRankOpt(searchValue float64, tokenRarityArr []TokenRarity) int {
 	rank := 1
 	arrLen := len(tokenRarityArr)
 	isOdd := arrLen%2 != 0
@@ -50,17 +51,17 @@ func calcRankOpt(searchValue float64, tokenRarityArr []float64) int {
 	for p1 := 0; p1 < arrEndIdx; p1++ {
 		p2--
 
-		if tokenRarityArr[p1] != searchValue && tokenRarityArr[p1] < searchValue {
+		if tokenRarityArr[p1].rarity != searchValue && tokenRarityArr[p1].rarity < searchValue {
 			rank++
 		}
-		if tokenRarityArr[p2] != searchValue && tokenRarityArr[p2] < searchValue {
+		if tokenRarityArr[p2].rarity != searchValue && tokenRarityArr[p2].rarity < searchValue {
 			rank++
 		}
 	}
 
 	// if arr length is not even, eval the middle arr item
 	if isOdd {
-		if tokenRarityArr[arrEndIdx+1] != searchValue && tokenRarityArr[arrEndIdx+1] < searchValue {
+		if tokenRarityArr[arrEndIdx+1].rarity != searchValue && tokenRarityArr[arrEndIdx+1].rarity < searchValue {
 			rank++
 		}
 	}
@@ -74,7 +75,7 @@ func calcRankOpt(searchValue float64, tokenRarityArr []float64) int {
 //
 // With how the data stores are designed:
 //   - Regardless of whether the array is presorted or not, there will always be a O(n) lookup.
-func (thisToken Token) lookupRarityRank(tokenRarityArr []float64) int {
+func (thisToken Token) lookupRarityRank(tokenRarityArr []TokenRarity) int {
 	// get the the rarity value
 	searchValue := roundFloat(thisToken.lookupRarity(tokenRarityArr), 15)
 

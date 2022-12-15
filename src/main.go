@@ -1,7 +1,9 @@
 package main
 
+import "fmt"
+
 // https://opensea.io/collection/azuki1
-var collectionSlug = "we-asuki"
+// var collectionSlug = "we-asuki"
 var tokenSlug = "azuki1"
 
 const COLOR_YELLOW = "\033[33m"
@@ -13,16 +15,18 @@ func main() {
 	// client := httpClient()
 	// res := getOsCollection(client, collectionSlug)
 
+	// retrieve tokens from server
 	tokens := getTokens(tokenSlug, int(10))
-	tokenRarityArr := make([]float64, len(tokens))
 
-	probMap := getAllTraitStatsSkip(tokens, len(tokens))
+	// create probability map
+	probMap := buildTraitProbabilityMap(tokens, len(tokens))
 
-	for _, token := range tokens {
-		calculateRarity(*token, probMap, tokenRarityArr)
-	}
+	tokenRarityArr := calculateTokensRarity(tokens, probMap)
 
 	for _, token := range tokens {
 		token.lookupRarityRank(tokenRarityArr)
 	}
+
+	// Display the top five
+	fmt.Println(sortRarityArr(tokenRarityArr)[:5])
 }

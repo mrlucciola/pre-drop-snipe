@@ -17,7 +17,7 @@ func TestRetrieveCollection(t *testing.T) {
 	}
 
 	// Deserialize data from the JSON file
-	var traitMap = CollectionTraits{}
+	var traitMap = TraitFrequencyMap{}
 	errUnmarshal := json.Unmarshal(content, &traitMap)
 	if errUnmarshal != nil {
 		t.Errorf("Failed ! unmarshalling json")
