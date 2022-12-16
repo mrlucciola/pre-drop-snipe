@@ -29,6 +29,14 @@ const baseUrlToken = "https://go-challenge.skip.money"
 //	}
 type TraitValueMap map[string]string
 
+// # Holds information about a single token of a single collection relevant to ranking
+//
+// - Token ID
+// - List of traits assigned to the token
+//
+// All tokens of a collection have the same categories of traits,
+// but may have a different "flavor" (or "type") for each category of trait.
+//
 // We do not put the rarity on this class because it would require
 // updating all token structs everytime a new token is minted.
 //
@@ -38,7 +46,7 @@ type Token struct {
 	traits TraitValueMap
 }
 
-// ## Look up the current token's rarity in the rarity array
+// # Look up the current token's rarity in the rarity array
 func (thisToken Token) lookupRarity(tokenRarityArr []TokenRarity) decimal.Decimal {
 	return tokenRarityArr[thisToken.id].rarity
 }
@@ -78,7 +86,7 @@ func calcRankOpt(searchValue decimal.Decimal, tokenRarityArr []TokenRarity) int 
 	return rank
 }
 
-// ## Sort the array and search for the index (i.e. rank) using the rarity value.
+// # Sort the array and search for the index (i.e. rank) using the rarity value.
 //
 // All algos in the go::sort package are `O(n log n)`
 //
@@ -92,7 +100,7 @@ func (thisToken Token) lookupRarityRank(tokenRarityArr []TokenRarity) int {
 	return rank
 }
 
-// ## Makes GET request to Skip's servers, retrieves asset
+// # Makes GET request to Skip's servers, retrieves asset
 //
 // # From the stub script
 //
@@ -131,17 +139,25 @@ func getToken(client *http.Client, collectionSlug string, tokenId int, freqMap T
 	// NEW: update the trait value map
 	// iterate thru the traits, add occurences to the map
 	for traitGroup, traitValue := range token.traits {
-		if _, found := freqMap[traitGroup]; !found {
-			freqMap[traitGroup] = TraitValueFreqMap{}
+		// add traits to the map
+		if _, found := freqMap.groups[traitGroup]; !found {
+			// data race: if two threads wanted to create a group and didnt know about each other, one would overwrite the other's data
+			// handle concurrent access
+			freqMap.mu.Lock()
+			freqMap.groups[traitGroup] = &TraitValueFreqMapMu{values: make(map[string]int)}
+			freqMap.mu.Unlock()
 		}
+		// handle concurrent access
+		freqMap.groups[traitGroup].mu.Lock()
 
-		freqMap[traitGroup][traitValue] += 1
+		freqMap.groups[traitGroup].values[traitValue] += 1
+		freqMap.groups[traitGroup].mu.Unlock()
 	}
 
 	return token
 }
 
-// ## Fetch all tokens for a given collection, without concurrency
+// # Fetch all tokens for a given collection, without concurrency
 //
 // 1. Get the amount of total available tokens (normally would be from OpenSea collection stats)
 //
@@ -149,7 +165,7 @@ func getToken(client *http.Client, collectionSlug string, tokenId int, freqMap T
 func getTokens(collectionSlug string, tokenArr []Token) TraitFrequencyMap {
 	tokenCt := len(tokenArr)
 	client := &http.Client{}
-	freqMap := make(TraitFrequencyMap)
+	freqMap := TraitFrequencyMap{groups: make(map[string]*TraitValueFreqMapMu)}
 
 	for tokenId := 0; tokenId < tokenCt; tokenId++ {
 		// log the token
@@ -165,7 +181,7 @@ func getTokens(collectionSlug string, tokenArr []Token) TraitFrequencyMap {
 	return traitOccurences
 }
 
-// ## Fetch all tokens for a given collection, using concurrency
+// # Fetch all tokens for a given collection, using concurrency
 //
 // 1. Get the amount of total available tokens (normally would be from OpenSea collection stats)
 //
@@ -173,7 +189,8 @@ func getTokens(collectionSlug string, tokenArr []Token) TraitFrequencyMap {
 func getTokensConcurrently(collectionSlug string, tokenArr []Token) TraitFrequencyMap {
 	jobCt := len(tokenArr)
 	// init frequency map
-	freqMap := make(TraitFrequencyMap)
+	// freqMap := make(TraitFrequencyMap)
+	freqMap := TraitFrequencyMap{groups: make(map[string]*TraitValueFreqMapMu)}
 	// set up workers and job pool
 	workerCt := 2000
 	transport := &http.Transport{
@@ -210,9 +227,9 @@ func getTokensConcurrently(collectionSlug string, tokenArr []Token) TraitFrequen
 	fmt.Println("(done) \n1  ", tokenArr[:5], "\n2  ", tokenArr[len(tokenArr)/2:5+len(tokenArr)/2], "\n3  ", tokenArr[len(tokenArr)-5:])
 
 	// TODO: move this to the http request logic
-	traitOccurences := buildTraitFrequencyMap(tokenArr)
+	// traitOccurences := buildTraitFrequencyMap(tokenArr)
 
-	return traitOccurences
+	return freqMap
 }
 
 // DEPRECATED
