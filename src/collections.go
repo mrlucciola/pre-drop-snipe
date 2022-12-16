@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
 )
 
 // DEPRECATED
 // Query OpenSea's api and get information about the collection and sales
-func getOsCollection(client *http.Client, collectionSlug string) CollectionPayload {
+func getOsCollection(collectionSlug string) CollectionPayload {
+	client := httpClient()
 	// base url for the OpenSea API
 	baseUrlOs := "https://api.opensea.io/api/v1/collection"
 
