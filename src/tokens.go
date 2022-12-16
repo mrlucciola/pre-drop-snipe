@@ -102,10 +102,9 @@ func (thisToken Token) lookupRarityRank(tokenRarityArr []TokenRarity) int {
 
 // # Makes GET request to Skip's servers, retrieves asset
 //
-// # From the stub script
-//
 // After receiving value from request, update frequency map
-func getToken(client *http.Client, collectionSlug string, tokenId int, freqMap TraitFrequencyMap) Token {
+// - From the stub script.
+func getToken(client *http.Client, collectionSlug string, tokenId int, freqMap *TraitFrequencyMap) Token {
 	// build the endpoint string
 	url := fmt.Sprintf("%s/%s/%d.json", baseUrlToken, collectionSlug, tokenId)
 
@@ -144,12 +143,11 @@ func getToken(client *http.Client, collectionSlug string, tokenId int, freqMap T
 			// data race: if two threads wanted to create a group and didnt know about each other, one would overwrite the other's data
 			// handle concurrent access
 			freqMap.mu.Lock()
-			freqMap.groups[traitGroup] = &TraitValueFreqMapMu{values: make(map[string]int)}
+			freqMap.groups[traitGroup] = &TraitValueFreqMap{values: make(map[string]int)}
 			freqMap.mu.Unlock()
 		}
 		// handle concurrent access
 		freqMap.groups[traitGroup].mu.Lock()
-
 		freqMap.groups[traitGroup].values[traitValue] += 1
 		freqMap.groups[traitGroup].mu.Unlock()
 	}
@@ -165,12 +163,13 @@ func getToken(client *http.Client, collectionSlug string, tokenId int, freqMap T
 func getTokens(collectionSlug string, tokenArr []Token) TraitFrequencyMap {
 	tokenCt := len(tokenArr)
 	client := &http.Client{}
-	freqMap := TraitFrequencyMap{groups: make(map[string]*TraitValueFreqMapMu)}
+	// var rwMu sync.RWMutex
+	freqMap := TraitFrequencyMap{groups: make(map[string]*TraitValueFreqMap)}
 
 	for tokenId := 0; tokenId < tokenCt; tokenId++ {
 		// log the token
-		logger.Println(string(COLOR_GREEN), fmt.Sprintf("Getting token %d", tokenId), string(COLOR_RESET))
-		token := getToken(client, collectionSlug, tokenId, freqMap)
+		logger.Println(string(ColorGreen), fmt.Sprintf("Getting token %d", tokenId), string(ColorReset))
+		token := getToken(client, collectionSlug, tokenId, &freqMap)
 		// add to the array
 		tokenArr[tokenId] = token
 	}
@@ -178,6 +177,7 @@ func getTokens(collectionSlug string, tokenArr []Token) TraitFrequencyMap {
 	// TODO: move this to the http request logic
 	traitOccurences := buildTraitFrequencyMap(tokenArr)
 
+	// "copy lock value" warning is inconsequential here, since all ops are sequential.
 	return traitOccurences
 }
 
@@ -186,11 +186,11 @@ func getTokens(collectionSlug string, tokenArr []Token) TraitFrequencyMap {
 // 1. Get the amount of total available tokens (normally would be from OpenSea collection stats)
 //
 // 2. Iterate through this range to get the collection's tokens
-func getTokensConcurrently(collectionSlug string, tokenArr []Token) TraitFrequencyMap {
+func getTokensConcurrently(collectionSlug string, tokenArr []Token, freqMap *TraitFrequencyMap) {
 	jobCt := len(tokenArr)
 	// init frequency map
-	// freqMap := make(TraitFrequencyMap)
-	freqMap := TraitFrequencyMap{groups: make(map[string]*TraitValueFreqMapMu)}
+	// var rwMu sync.RWMutex
+
 	// set up workers and job pool
 	workerCt := 2000
 	transport := &http.Transport{
@@ -224,12 +224,6 @@ func getTokensConcurrently(collectionSlug string, tokenArr []Token) TraitFrequen
 
 	close(jobChannel)
 	waitGroup.Wait()
-	fmt.Println("(done) \n1  ", tokenArr[:5], "\n2  ", tokenArr[len(tokenArr)/2:5+len(tokenArr)/2], "\n3  ", tokenArr[len(tokenArr)-5:])
-
-	// TODO: move this to the http request logic
-	// traitOccurences := buildTraitFrequencyMap(tokenArr)
-
-	return freqMap
 }
 
 // DEPRECATED

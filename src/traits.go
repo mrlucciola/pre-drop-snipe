@@ -18,11 +18,10 @@ import (
 //	  "m1 bored unshaven": 2257,
 //	  "m1 dumbfounded":    750,
 //	}
-type TraitValueFreqMapMu struct {
-	mu     *sync.RWMutex
+type TraitValueFreqMap struct {
+	mu     sync.RWMutex
 	values map[string]int
 }
-type TraitValueFreqMap map[string]int
 
 // # Holds the rarity scores for each individual trait value.
 //
@@ -49,17 +48,13 @@ type TraitValueScoreMap map[string]decimal.Decimal
 //	}
 type TraitValueProbMap map[string]decimal.Decimal
 
-// type TraitFrequencyMap map[string]TraitValueFreqMap
-
-// type TraitFrequencyMap map[string]*TraitValueFreqMapMu
-
 // # A collection of trait value frequencies, ordered by category
 //
 // Trait-category maps contain maps for trait-values map[traitValueStr]int
 // Trait-value maps contain each value's frequency - the amount of appearances in a list of tokens.
 type TraitFrequencyMap struct {
-	mu     *sync.RWMutex
-	groups map[string]*TraitValueFreqMapMu
+	mu     sync.RWMutex
+	groups map[string]*TraitValueFreqMap
 }
 
 // # Probabilities for all traits.
@@ -70,18 +65,19 @@ type TraitScoreMap map[string]TraitValueScoreMap
 
 const initPrecision = 0
 
+// DEPRECATED
 // # Build the trait frequency map
 // TODO: parallelize if possible
 func buildTraitFrequencyMap(tokenArr []Token) TraitFrequencyMap {
 	// traitOccurences := make(TraitFrequencyMap)
-	traitOccurences := TraitFrequencyMap{groups: make(map[string]*TraitValueFreqMapMu)}
+	traitOccurences := TraitFrequencyMap{groups: make(map[string]*TraitValueFreqMap)}
 
 	for _, token := range tokenArr {
 
 		// iterate thru the traits, add occurences to the map
 		for traitGroup, traitValue := range token.traits {
 			if _, found := traitOccurences.groups[traitGroup]; !found {
-				traitOccurences.groups[traitGroup] = &TraitValueFreqMapMu{values: make(map[string]int)}
+				traitOccurences.groups[traitGroup] = &TraitValueFreqMap{values: make(map[string]int)}
 			}
 
 			// handle concurrent access
@@ -104,7 +100,7 @@ Iterate through the list of tokens pulled from the Skip Protocol API and
 build a frequency map for each trait as they appear.
   - Input is `Token` array - from Skip Protocol API
 */
-func buildTraitProbabilityMap(tokenArr []Token, traitOccurences TraitFrequencyMap) TraitProbabilityMap {
+func buildTraitProbabilityMap(tokenArr []Token, traitOccurences *TraitFrequencyMap) TraitProbabilityMap {
 
 	// TODO: parallelize if possible
 	traitProbabilities := make(TraitProbabilityMap)
@@ -130,7 +126,21 @@ func buildTraitProbabilityMap(tokenArr []Token, traitOccurences TraitFrequencyMa
 
 	return traitProbabilities
 }
-func buildTraitScoreMap(tokenArr []Token, traitOccurences TraitFrequencyMap) TraitScoreMap {
+
+/*
+# Build a mapping of all rarity scores for all possible traits assignable to a token.
+
+The map is a nested data structure that holds
+  - "Trait Groups" at the top level
+  - "Trait Values" within trait groups
+
+Iterate through the list of tokens pulled from the Skip Protocol API and
+build a frequency map for each trait as they appear.
+  - Input is `Token` array - from Skip Protocol API
+
+Relies on the trait frequency map to be calculated
+*/
+func buildTraitScoreMap(tokenArr []Token, traitOccurences *TraitFrequencyMap) TraitScoreMap {
 
 	// TODO: parallelize if possible
 	traitScores := make(TraitScoreMap)

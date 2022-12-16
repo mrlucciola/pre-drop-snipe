@@ -17,9 +17,9 @@ func getOsCollection(collectionSlug string) CollectionPayload {
 	endpointOs := fmt.Sprintf("%v/%v", baseUrlOs, collectionSlug)
 
 	// Build and send the request
-	logger.Println(string(COLOR_YELLOW), fmt.Sprintf("Getting collection `%s`", collectionSlug), string(COLOR_RESET))
+	logger.Println(string(ColorYellow), fmt.Sprintf("Getting collection `%s`", collectionSlug), string(ColorReset))
 	res := sendGetRequest(client, endpointOs)
-	logger.Println(string(COLOR_GREEN), fmt.Sprintf("Success: retrieved collection `%s`", collectionSlug), string(COLOR_RESET))
+	logger.Println(string(ColorGreen), fmt.Sprintf("Success: retrieved collection `%s`", collectionSlug), string(ColorReset))
 
 	// Deserialize response and handle errors
 	var collectionRes CollectionResponse
@@ -28,6 +28,7 @@ func getOsCollection(collectionSlug string) CollectionPayload {
 	}
 
 	return CollectionPayload{
+		// "copy lock value" warning is inconsequential here, since all ops are sequential.
 		Traits: collectionRes.Collection.Traits,
 		Count:  collectionRes.Collection.Stats.Count,
 	}
