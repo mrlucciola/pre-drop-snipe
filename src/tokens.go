@@ -6,6 +6,7 @@ import (
 	"io"
 	"math"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
@@ -123,7 +124,7 @@ func getToken(client *http.Client, collectionSlug string, tokenId int, freqMap *
 
 	// for now we are handling errors by returning an empty struct
 	if err != nil {
-		fmt.Errorf("Error fetching token")
+		fmt.Fprintf(os.Stderr, "Error fetching token: %v", tokenId)
 	}
 	defer res.Body.Close()
 
@@ -132,7 +133,7 @@ func getToken(client *http.Client, collectionSlug string, tokenId int, freqMap *
 
 	// for now we are handling errors by returning an empty struct
 	if err != nil {
-		fmt.Errorf("Error handling token")
+		fmt.Fprintf(os.Stderr, "Error handling token: %v", tokenId)
 	}
 
 	// init the trait map
