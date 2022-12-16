@@ -77,8 +77,8 @@ func calcAllTraitValueProbs(traits TraitFrequencyMap, activeTokenCount int) Trai
 
 // Build the trait frequency map
 // TODO: parallelize if possible
-func buildTraitFrequencyMap(tokenArr []*Token) TraitFrequencyMap {
-	traitOccurences := TraitFrequencyMap{}
+func buildTraitFrequencyMap(tokenArr []Token) TraitFrequencyMap {
+	traitOccurences := make(TraitFrequencyMap)
 
 	for _, token := range tokenArr {
 
@@ -105,7 +105,7 @@ Iterate through the list of tokens pulled from the Skip Protocol API and
 build a frequency map for each trait as they appear.
   - Input is `Token` array - from Skip Protocol API
 */
-func buildTraitProbabilityMap(tokenArr []*Token, activeTokenCount int) TraitProbabilityMap {
+func buildTraitProbabilityMap(tokenArr []Token, activeTokenCount int) TraitProbabilityMap {
 
 	traitOccurences := buildTraitFrequencyMap(tokenArr)
 

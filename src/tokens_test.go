@@ -8,19 +8,21 @@ import (
 func TestRetrieveToken(t *testing.T) {
 	expected := Token{
 		id: 0,
-		traits: map[string]string{
+		traits: TraitValueMap{
+			"Background": "Off White A",
 			"Clothing":   "Pink Oversized Kimono",
 			"Eyes":       "Striking",
 			"Offhand":    "Monkey King Staff",
 			"Type":       "Human",
 			"Hair":       "Water",
 			"Mouth":      "Frown",
-			"Background": "Off White A",
 		},
 	}
-	output := getToken("we-azuki", 0)
 
-	if reflect.DeepEqual(expected, output) {
+	client := httpClient()
+	output := getToken(client, "azuki1", 0)
+
+	if reflect.DeepEqual(expected, output) == true {
 		t.Errorf("Failed ! got %v want %v", output, expected)
 	} else {
 		t.Logf("Success !")
@@ -29,9 +31,9 @@ func TestRetrieveToken(t *testing.T) {
 
 func TestRetrieveTokens(t *testing.T) {
 	expected := []*Token{
-		&Token{
+		{
 			id: 0,
-			traits: map[string]string{
+			traits: TraitValueMap{
 				"Background": "Off White A",
 				"Clothing":   "Pink Oversized Kimono",
 				"Eyes":       "Striking",
@@ -41,9 +43,9 @@ func TestRetrieveTokens(t *testing.T) {
 				"Mouth":      "Frown",
 			},
 		},
-		&Token{
-			id: 0,
-			traits: map[string]string{
+		{
+			id: 1,
+			traits: TraitValueMap{
 				"Background": "Off White D",
 				"Clothing":   "White Qipao with Fur",
 				"Eyes":       "Daydreaming",
@@ -57,7 +59,7 @@ func TestRetrieveTokens(t *testing.T) {
 
 	output := getTokens("azuki1", 2)
 
-	if reflect.DeepEqual(expected, output) {
+	if reflect.DeepEqual(expected, output) == true {
 		t.Errorf("Failed ! got %v want %v", output, expected)
 	} else {
 		t.Logf("Success !")

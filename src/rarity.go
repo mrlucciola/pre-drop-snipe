@@ -1,6 +1,9 @@
 package main
 
-import "sort"
+import (
+	"fmt"
+	"sort"
+)
 
 type TokenRarity struct {
 	rarity float64
@@ -34,10 +37,28 @@ func calculateTokenRarity(tokenToEval Token, probabilityMap TraitProbabilityMap,
 // # Returns array of token rarities, in the order indexible by token.id
 //
 // Array is not sorted
-func calculateTokensRarity(tokensToEval []*Token, probabilityMap TraitProbabilityMap) []TokenRarity {
-	tokenRarityArr := make([]TokenRarity, len(tokensToEval))
+func calculateTokensRarity(tokensToEval []Token, probabilityMap TraitProbabilityMap) []TokenRarity {
+	// temporary: filter empty tokens out of array
+	filteredMap := make(map[string]Token)
+	for idx, token := range tokensToEval {
+		fmt.Println("token pre", idx, token)
+		// if token's trait struct is empty, ignore
+		if len(token.traits) > 0 {
+			idStr := fmt.Sprintf("%d", token.id)
+			filteredMap[idStr] = token
+		}
+	}
+	filteredTokenArr := make([]Token, len(filteredMap))
+	for idx, token := range filteredMap {
+		fmt.Println("token post", idx, token)
+		filteredTokenArr[token.id] = token
+	}
+
+	// init arr
+	tokenRarityArr := make([]TokenRarity, len(filteredMap))
+	// parallelize?
 	for _, token := range tokensToEval {
-		calculateTokenRarity(*token, probabilityMap, tokenRarityArr)
+		calculateTokenRarity(token, probabilityMap, tokenRarityArr)
 	}
 
 	return tokenRarityArr

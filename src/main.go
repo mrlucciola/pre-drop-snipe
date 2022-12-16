@@ -1,6 +1,8 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // https://opensea.io/collection/azuki1
 // var collectionSlug = "we-asuki"
@@ -15,10 +17,16 @@ func main() {
 	// client := httpClient()
 	// res := getOsCollection(client, collectionSlug)
 
+	// preallocate an array - as long as we know up front how many tokens we need to call
+	// we can store using their id as this array's index
+	tokens := make([]Token, 10000)
+
 	// retrieve tokens from server
-	tokens := getTokens(tokenSlug, int(10))
+	// tokens := getTokens(tokenSlug, int(10))
+	getTokensConcurrently(tokenSlug, tokens)
 
 	// create probability map
+	// TODO: move in to the concurrent logic
 	probMap := buildTraitProbabilityMap(tokens, len(tokens))
 
 	tokenRarityArr := calculateTokensRarity(tokens, probMap)
@@ -27,6 +35,11 @@ func main() {
 		token.lookupRarityRank(tokenRarityArr)
 	}
 
+	// sort
+	sortedArr := sortRarityArr(tokenRarityArr)
+	for _, token := range sortedArr {
+		fmt.Println("sorted", token)
+	}
 	// Display the top five
-	fmt.Println(sortRarityArr(tokenRarityArr)[:5])
+	fmt.Println(sortedArr[:5])
 }
