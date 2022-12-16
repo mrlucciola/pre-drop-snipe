@@ -6,33 +6,33 @@ import "fmt"
 // var collectionSlug = "we-asuki"
 var tokenSlug = "azuki1"
 
-const COLOR_YELLOW = "\033[33m"
-const COLOR_GREEN = "\033[32m"
-const COLOR_RED = "\033[31m"
-const COLOR_RESET = "\033[0m"
+const ColorYellow = "\033[33m"
+const ColorGreen = "\033[32m"
+const ColorRed = "\033[31m"
+const ColorReset = "\033[0m"
 
 func main() {
 	// preallocate an array - as long as we know up front how many tokens we need to call
 	// we can store using their id as this array's index
 	tokens := make([]Token, 10000)
+	freqMap := TraitFrequencyMap{groups: make(map[string]*TraitValueFreqMap)}
 
 	// retrieve tokens from server
 	useConcurrency := true
 	if useConcurrency {
-		getTokensConcurrently(tokenSlug, tokens)
+		getTokensConcurrently(tokenSlug, tokens, &freqMap)
 	} else {
-		getTokens(tokenSlug, tokens)
+		freqMap = getTokens(tokenSlug, tokens)
 	}
 
 	var tokenRarityArr []TokenRarity
 	useRarityScore := true
 	if useRarityScore {
 		// TODO: move in to the concurrent logic
-		rarityScoreMap := buildTraitScoreMap(tokens, len(tokens))
+		rarityScoreMap := buildTraitScoreMap(tokens, &freqMap)
 		tokenRarityArr = calculateTokensRarityScores(tokens, rarityScoreMap)
-
 	} else {
-		probMap := buildTraitProbabilityMap(tokens, len(tokens))
+		probMap := buildTraitProbabilityMap(tokens, &freqMap)
 		tokenRarityArr = calculateTokensRarity(tokens, probMap)
 	}
 

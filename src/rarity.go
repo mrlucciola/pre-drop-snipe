@@ -88,7 +88,7 @@ func calculateTokensRarity(tokensToEval []Token, probabilityMap TraitProbability
 //
 // Loop over calculate-token-rarity fxn.
 //
-// ### Returns array of token rarity scores, in the order indexible by token.id
+// # Returns array of token rarity scores, in the order indexible by token.id
 //
 // Array is not sorted
 func calculateTokensRarityScores(tokensToEval []Token, rarityScoreMap TraitScoreMap) []TokenRarity {

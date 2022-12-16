@@ -29,6 +29,14 @@ const baseUrlToken = "https://go-challenge.skip.money"
 //	}
 type TraitValueMap map[string]string
 
+// # Holds information about a single token of a single collection relevant to ranking
+//
+// - Token ID
+// - List of traits assigned to the token
+//
+// All tokens of a collection have the same categories of traits,
+// but may have a different "flavor" (or "type") for each category of trait.
+//
 // We do not put the rarity on this class because it would require
 // updating all token structs everytime a new token is minted.
 //
@@ -38,7 +46,7 @@ type Token struct {
 	traits TraitValueMap
 }
 
-// ## Look up the current token's rarity in the rarity array
+// # Look up the current token's rarity in the rarity array
 func (thisToken Token) lookupRarity(tokenRarityArr []TokenRarity) decimal.Decimal {
 	return tokenRarityArr[thisToken.id].rarity
 }
@@ -78,7 +86,7 @@ func calcRankOpt(searchValue decimal.Decimal, tokenRarityArr []TokenRarity) int 
 	return rank
 }
 
-// ## Sort the array and search for the index (i.e. rank) using the rarity value.
+// # Sort the array and search for the index (i.e. rank) using the rarity value.
 //
 // All algos in the go::sort package are `O(n log n)`
 //
@@ -92,10 +100,11 @@ func (thisToken Token) lookupRarityRank(tokenRarityArr []TokenRarity) int {
 	return rank
 }
 
-// ## Makes GET request to Skip's servers, retrieves asset
+// # Makes GET request to Skip's servers, retrieves asset
 //
-// From the stub script
-func getToken(client *http.Client, collectionSlug string, tokenId int) Token {
+// After receiving value from request, update frequency map
+// - From the stub script.
+func getToken(client *http.Client, collectionSlug string, tokenId int, freqMap *TraitFrequencyMap) Token {
 	// build the endpoint string
 	url := fmt.Sprintf("%s/%s/%d.json", baseUrlToken, collectionSlug, tokenId)
 
@@ -121,38 +130,68 @@ func getToken(client *http.Client, collectionSlug string, tokenId int) Token {
 
 	// deserialize token's traits from the response body's byte arr into our map
 	json.Unmarshal(body, &traits)
-
-	return Token{
+	token := Token{
 		id:     tokenId,
 		traits: traits,
 	}
+
+	// NEW: update the trait value map
+	// iterate thru the traits, add occurences to the map
+	for traitGroup, traitValue := range token.traits {
+		// add traits to the map
+		if _, found := freqMap.groups[traitGroup]; !found {
+			// data race: if two threads wanted to create a group and didnt know about each other, one would overwrite the other's data
+			// handle concurrent access
+			freqMap.mu.Lock()
+			freqMap.groups[traitGroup] = &TraitValueFreqMap{values: make(map[string]int)}
+			freqMap.mu.Unlock()
+		}
+		// handle concurrent access
+		freqMap.groups[traitGroup].mu.Lock()
+		freqMap.groups[traitGroup].values[traitValue] += 1
+		freqMap.groups[traitGroup].mu.Unlock()
+	}
+
+	return token
 }
 
-// ## Fetch all tokens for a given collection, without concurrency
+// # Fetch all tokens for a given collection, without concurrency
 //
 // 1. Get the amount of total available tokens (normally would be from OpenSea collection stats)
 //
 // 2. Iterate through this range to get the collection's tokens
-func getTokens(collectionSlug string, tokenArr []Token) {
+func getTokens(collectionSlug string, tokenArr []Token) TraitFrequencyMap {
 	tokenCt := len(tokenArr)
 	client := &http.Client{}
+	// var rwMu sync.RWMutex
+	freqMap := TraitFrequencyMap{groups: make(map[string]*TraitValueFreqMap)}
 
 	for tokenId := 0; tokenId < tokenCt; tokenId++ {
 		// log the token
-		logger.Println(string(COLOR_GREEN), fmt.Sprintf("Getting token %d", tokenId), string(COLOR_RESET))
-		token := getToken(client, collectionSlug, tokenId)
+		logger.Println(string(ColorGreen), fmt.Sprintf("Getting token %d", tokenId), string(ColorReset))
+		token := getToken(client, collectionSlug, tokenId, &freqMap)
 		// add to the array
 		tokenArr[tokenId] = token
 	}
+
+	// TODO: move this to the http request logic
+	traitOccurences := buildTraitFrequencyMap(tokenArr)
+
+	// "copy lock value" warning is inconsequential here, since all ops are sequential.
+	return traitOccurences
 }
 
-// ## Fetch all tokens for a given collection, using concurrency
+// # Fetch all tokens for a given collection, using concurrency
 //
 // 1. Get the amount of total available tokens (normally would be from OpenSea collection stats)
 //
 // 2. Iterate through this range to get the collection's tokens
-func getTokensConcurrently(collectionSlug string, tokenArr []Token) {
+func getTokensConcurrently(collectionSlug string, tokenArr []Token, freqMap *TraitFrequencyMap) {
 	jobCt := len(tokenArr)
+	// init frequency map
+	// var rwMu sync.RWMutex
+
+	// set up workers and job pool
 	workerCt := 2000
 	transport := &http.Transport{
 		ResponseHeaderTimeout: time.Hour,
@@ -172,7 +211,7 @@ func getTokensConcurrently(collectionSlug string, tokenArr []Token) {
 			defer wg.Done()
 			for jobId := range jobChannel {
 				// assign incoming token data to the pre-allocated array
-				tokenArr[jobId] = getToken(client, collectionSlug, jobId)
+				tokenArr[jobId] = getToken(client, collectionSlug, jobId, freqMap)
 			}
 
 		}(workerId, &waitGroup)
@@ -185,7 +224,6 @@ func getTokensConcurrently(collectionSlug string, tokenArr []Token) {
 
 	close(jobChannel)
 	waitGroup.Wait()
-	fmt.Println("(done) \n1  ", tokenArr[:5], "\n2  ", tokenArr[len(tokenArr)/2:5+len(tokenArr)/2], "\n3  ", tokenArr[len(tokenArr)-5:])
 }
 
 // DEPRECATED

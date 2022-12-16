@@ -1,8 +1,12 @@
 package main
 
-import "github.com/shopspring/decimal"
+import (
+	"sync"
 
-// Frequency map for trait values of a single group
+	"github.com/shopspring/decimal"
+)
+
+// # Frequency map for trait values of a single group
 //
 // Shows the occurrences of each trait.
 //
@@ -14,9 +18,15 @@ import "github.com/shopspring/decimal"
 //	  "m1 bored unshaven": 2257,
 //	  "m1 dumbfounded":    750,
 //	}
-type TraitValueFreqMap map[string]int
+type TraitValueFreqMap struct {
+	mu     sync.RWMutex
+	values map[string]int
+}
 
-// Calculated like this:
+// # Holds the rarity scores for each individual trait value.
+//
+// 1. Multiply the trait frequency by # of trait values within group
+// 2. Take the inverse of this value
 //
 //	given category Mouth: {
 //	  "m2 bored":          0.0002522704339, = 1 / (3,964    = 991 * 4)
@@ -26,7 +36,7 @@ type TraitValueFreqMap map[string]int
 //	}
 type TraitValueScoreMap map[string]decimal.Decimal
 
-// Probability map for trait values of a single group.
+// # Probability map for trait values of a single group.
 //
 // Trait value probabilities are calculated from the frequency mapping.
 //
@@ -38,30 +48,42 @@ type TraitValueScoreMap map[string]decimal.Decimal
 //	}
 type TraitValueProbMap map[string]decimal.Decimal
 
-type TraitFrequencyMap map[string]TraitValueFreqMap
+// # A collection of trait value frequencies, ordered by category
+//
+// Trait-category maps contain maps for trait-values map[traitValueStr]int
+// Trait-value maps contain each value's frequency - the amount of appearances in a list of tokens.
+type TraitFrequencyMap struct {
+	mu     sync.RWMutex
+	groups map[string]*TraitValueFreqMap
+}
 
-// Probabilities for all traits
+// # Probabilities for all traits.
 type TraitProbabilityMap map[string]TraitValueProbMap
 
-// Trait rarity scores, by category
+// # Trait rarity scores, by category.
 type TraitScoreMap map[string]TraitValueScoreMap
 
 const initPrecision = 0
 
-// Build the trait frequency map
+// DEPRECATED
+// # Build the trait frequency map
 // TODO: parallelize if possible
 func buildTraitFrequencyMap(tokenArr []Token) TraitFrequencyMap {
-	traitOccurences := make(TraitFrequencyMap)
+	// traitOccurences := make(TraitFrequencyMap)
+	traitOccurences := TraitFrequencyMap{groups: make(map[string]*TraitValueFreqMap)}
 
 	for _, token := range tokenArr {
 
 		// iterate thru the traits, add occurences to the map
 		for traitGroup, traitValue := range token.traits {
-			if _, found := traitOccurences[traitGroup]; !found {
-				traitOccurences[traitGroup] = TraitValueFreqMap{}
+			if _, found := traitOccurences.groups[traitGroup]; !found {
+				traitOccurences.groups[traitGroup] = &TraitValueFreqMap{values: make(map[string]int)}
 			}
 
-			traitOccurences[traitGroup][traitValue] += 1
+			// handle concurrent access
+			traitOccurences.groups[traitGroup].mu.Lock()
+			traitOccurences.groups[traitGroup].values[traitValue] += 1
+			traitOccurences.groups[traitGroup].mu.Unlock()
 		}
 	}
 	return traitOccurences
@@ -78,17 +100,15 @@ Iterate through the list of tokens pulled from the Skip Protocol API and
 build a frequency map for each trait as they appear.
   - Input is `Token` array - from Skip Protocol API
 */
-func buildTraitProbabilityMap(tokenArr []Token, activeTokenCount int) TraitProbabilityMap {
-
-	traitOccurences := buildTraitFrequencyMap(tokenArr)
+func buildTraitProbabilityMap(tokenArr []Token, traitOccurences *TraitFrequencyMap) TraitProbabilityMap {
 
 	// TODO: parallelize if possible
 	traitProbabilities := make(TraitProbabilityMap)
-	for traitGroup, traitValueFreqMap := range traitOccurences {
+	for traitGroup, traitValueFreqMap := range traitOccurences.groups {
 		// sum all value counts for the group
 		groupSum := 0
 		// TODO: parallelize if possible
-		for _, valueCt := range traitValueFreqMap {
+		for _, valueCt := range traitValueFreqMap.values {
 			groupSum += valueCt
 		}
 		// handle empty properties
@@ -98,7 +118,7 @@ func buildTraitProbabilityMap(tokenArr []Token, activeTokenCount int) TraitProba
 
 		// iter thru each value, divide to get prob for each value, assign to map
 		// TODO: parallelize if possible
-		for traitValue, valueCt := range traitValueFreqMap {
+		for traitValue, valueCt := range traitValueFreqMap.values {
 			val := decimal.NewFromInt(int64(valueCt)).Div(decimal.NewFromInt(int64(groupSum)))
 			traitProbabilities[traitGroup][traitValue] = val
 		}
@@ -106,23 +126,34 @@ func buildTraitProbabilityMap(tokenArr []Token, activeTokenCount int) TraitProba
 
 	return traitProbabilities
 }
-func buildTraitScoreMap(tokenArr []Token, activeTokenCount int) TraitScoreMap {
 
-	// TODO: move this to the http request logic
-	traitOccurences := buildTraitFrequencyMap(tokenArr)
+/*
+# Build a mapping of all rarity scores for all possible traits assignable to a token.
+
+The map is a nested data structure that holds
+  - "Trait Groups" at the top level
+  - "Trait Values" within trait groups
+
+Iterate through the list of tokens pulled from the Skip Protocol API and
+build a frequency map for each trait as they appear.
+  - Input is `Token` array - from Skip Protocol API
+
+Relies on the trait frequency map to be calculated
+*/
+func buildTraitScoreMap(tokenArr []Token, traitOccurences *TraitFrequencyMap) TraitScoreMap {
 
 	// TODO: parallelize if possible
 	traitScores := make(TraitScoreMap)
-	for traitGroup, traitValueFreqMap := range traitOccurences {
+	for traitGroup, traitValueFreqMap := range traitOccurences.groups {
 		// get the number of unique trait values
-		uniqueTraitCt := len(traitValueFreqMap)
+		uniqueTraitCt := len(traitValueFreqMap.values)
 		// handle empty properties
 		if _, found := traitScores[traitGroup]; !found {
 			traitScores[traitGroup] = make(TraitValueScoreMap)
 		}
 		// TODO: parallelize if possible
 		// multiply the amount of times this value occurs, by the amount of unique traits (values) within the group
-		for traitValue, valueFreqCt := range traitValueFreqMap {
+		for traitValue, valueFreqCt := range traitValueFreqMap.values {
 			traitValueRarityScore := decimal.New(1, 0).Div(decimal.NewFromInt(int64(valueFreqCt)).Mul(decimal.NewFromInt(int64(uniqueTraitCt))))
 			traitScores[traitGroup][traitValue] = traitValueRarityScore
 		}
