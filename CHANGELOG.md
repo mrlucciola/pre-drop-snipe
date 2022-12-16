@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.2.0](https://github.com/mrlucciola/pre-drop-snipe/compare/v0.1.0...v0.2.0) (2022-12-16)
+
+
+### Features
+
+* [#23](https://github.com/mrlucciola/pre-drop-snipe/issues/23) add api call concurrency ([#28](https://github.com/mrlucciola/pre-drop-snipe/issues/28)) ([ba15f4b](https://github.com/mrlucciola/pre-drop-snipe/commit/ba15f4b628ab3886d40222dcbc48df0c17788e88))
+* [#31](https://github.com/mrlucciola/pre-drop-snipe/issues/31) implement rarity score calculation ([#32](https://github.com/mrlucciola/pre-drop-snipe/issues/32)) ([653e257](https://github.com/mrlucciola/pre-drop-snipe/commit/653e2570b80032ca47cdeb6ce55bd29c3a2c4952))
+
+
+### Bug Fixes
+
+* [#000](https://github.com/mrlucciola/pre-drop-snipe/issues/000) correct error logging ([de604f9](https://github.com/mrlucciola/pre-drop-snipe/commit/de604f95b678e17be535405373016bf0d21b1dd6))
+* [#24](https://github.com/mrlucciola/pre-drop-snipe/issues/24) replace float math with decimal lib ([#30](https://github.com/mrlucciola/pre-drop-snipe/issues/30)) ([53d1191](https://github.com/mrlucciola/pre-drop-snipe/commit/53d11919a0e0d7def7900e1091ceaccc5259f824))
+* [#27](https://github.com/mrlucciola/pre-drop-snipe/issues/27) move builddistributionmap logic to gettoken goroutine ([#35](https://github.com/mrlucciola/pre-drop-snipe/issues/35)) ([d7627ec](https://github.com/mrlucciola/pre-drop-snipe/commit/d7627ecca81405e176f1d6e8f578c1cab3837bb6))
+* [#34](https://github.com/mrlucciola/pre-drop-snipe/issues/34) convert variables named `(trait) group` to `(trait) category` ([#37](https://github.com/mrlucciola/pre-drop-snipe/issues/37)) ([3cbcbfb](https://github.com/mrlucciola/pre-drop-snipe/commit/3cbcbfbcdd4435428d1be260e7e2e8c732cf7299))
+
 ## 0.1.0 (2022-12-15)
 
 
