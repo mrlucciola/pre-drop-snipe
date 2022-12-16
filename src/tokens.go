@@ -14,6 +14,16 @@ import (
 
 const baseUrlToken = "https://go-challenge.skip.money"
 
+// # Data store for all tokens from API
+// We are more concerned with data consistency so we are trading off speed
+// for a map that only contains valid entries (no blanks) and improved readability via reduced code
+type TokensMap struct {
+	mu sync.RWMutex
+	v  map[int]Token
+}
+
+// type TokensMap sync.Map
+
 // Map of trait group to value
 //
 // Data structure containing all of the traits for a single token
@@ -104,7 +114,7 @@ func (thisToken Token) lookupRarityRank(tokenRarityArr []TokenRarity) int {
 //
 // After receiving value from request, update frequency map
 // - From the stub script.
-func getToken(client *http.Client, collectionSlug string, tokenId int, freqMap *TraitFrequencyMap) Token {
+func getToken(client *http.Client, collectionSlug string, tokenId int, freqMap *TraitFrequencyMap, tokensMap *TokensMap) {
 	// build the endpoint string
 	url := fmt.Sprintf("%s/%s/%d.json", baseUrlToken, collectionSlug, tokenId)
 
@@ -113,7 +123,7 @@ func getToken(client *http.Client, collectionSlug string, tokenId int, freqMap *
 
 	// for now we are handling errors by returning an empty struct
 	if err != nil {
-		return Token{}
+		fmt.Errorf("Error fetching token")
 	}
 	defer res.Body.Close()
 
@@ -122,7 +132,7 @@ func getToken(client *http.Client, collectionSlug string, tokenId int, freqMap *
 
 	// for now we are handling errors by returning an empty struct
 	if err != nil {
-		return Token{}
+		fmt.Errorf("Error handling token")
 	}
 
 	// init the trait map
@@ -152,33 +162,10 @@ func getToken(client *http.Client, collectionSlug string, tokenId int, freqMap *
 		freqMap.groups[traitGroup].mu.Unlock()
 	}
 
-	return token
-}
-
-// # Fetch all tokens for a given collection, without concurrency
-//
-// 1. Get the amount of total available tokens (normally would be from OpenSea collection stats)
-//
-// 2. Iterate through this range to get the collection's tokens
-func getTokens(collectionSlug string, tokenArr []Token) TraitFrequencyMap {
-	tokenCt := len(tokenArr)
-	client := &http.Client{}
-	// var rwMu sync.RWMutex
-	freqMap := TraitFrequencyMap{groups: make(map[string]*TraitValueFreqMap)}
-
-	for tokenId := 0; tokenId < tokenCt; tokenId++ {
-		// log the token
-		logger.Println(string(ColorGreen), fmt.Sprintf("Getting token %d", tokenId), string(ColorReset))
-		token := getToken(client, collectionSlug, tokenId, &freqMap)
-		// add to the array
-		tokenArr[tokenId] = token
-	}
-
-	// TODO: move this to the http request logic
-	traitOccurences := buildTraitFrequencyMap(tokenArr)
-
-	// "copy lock value" warning is inconsequential here, since all ops are sequential.
-	return traitOccurences
+	// NEW: add to token map
+	tokensMap.mu.Lock()
+	tokensMap.v[tokenId] = token
+	tokensMap.mu.Unlock()
 }
 
 // # Fetch all tokens for a given collection, using concurrency
@@ -186,10 +173,9 @@ func getTokens(collectionSlug string, tokenArr []Token) TraitFrequencyMap {
 // 1. Get the amount of total available tokens (normally would be from OpenSea collection stats)
 //
 // 2. Iterate through this range to get the collection's tokens
-func getTokensConcurrently(collectionSlug string, tokenArr []Token, freqMap *TraitFrequencyMap) {
-	jobCt := len(tokenArr)
-	// init frequency map
-	// var rwMu sync.RWMutex
+func getTokensConcurrently(collectionSlug string, freqMap *TraitFrequencyMap, tokensMap *TokensMap, collectionSize int) {
+	// job count = token count
+	tokenCt := collectionSize
 
 	// set up workers and job pool
 	workerCt := 2000
@@ -209,16 +195,15 @@ func getTokensConcurrently(collectionSlug string, tokenArr []Token, freqMap *Tra
 
 		go func(wid int, wg *sync.WaitGroup) {
 			defer wg.Done()
-			for jobId := range jobChannel {
-				// assign incoming token data to the pre-allocated array
-				tokenArr[jobId] = getToken(client, collectionSlug, jobId, freqMap)
+			for tokenId := range jobChannel {
+				getToken(client, collectionSlug, tokenId, freqMap, tokensMap)
 			}
 
 		}(workerId, &waitGroup)
 	}
 
 	// Assign jobs to channel - add jobs to pool
-	for jobId := 0; jobId < jobCt; jobId++ {
+	for jobId := 0; jobId < tokenCt; jobId++ {
 		jobChannel <- jobId
 	}
 
@@ -227,18 +212,26 @@ func getTokensConcurrently(collectionSlug string, tokenArr []Token, freqMap *Tra
 }
 
 // DEPRECATED
-// get the rank - lower probability = higher rank
-// unoptomized
-// func calcRankBF(searchValue float64, tokenRarityArr []TokenRarity) int {
-// 	rank := 1
+// # Fetch all tokens for a given collection, without concurrency
+//
+// 1. Get the amount of total available tokens (normally would be from OpenSea collection stats)
+//
+// 2. Iterate through this range to get the collection's tokens
+func getTokens(collectionSlug string, tokenMap *TokensMap) TraitFrequencyMap {
+	tokenCt := len(tokenMap.v)
+	client := &http.Client{}
+	// var rwMu sync.RWMutex
+	freqMap := TraitFrequencyMap{groups: make(map[string]*TraitValueFreqMap)}
 
-// 	for idx := 0; idx < len(tokenRarityArr); idx++ {
-// 		lookupValue := tokenRarityArr[idx].rarity
-// 		// handle duplicates
-// 		if lookupValue != searchValue && lookupValue < searchValue {
-// 			rank++
-// 		}
+	for tokenId := 0; tokenId < tokenCt; tokenId++ {
+		// log the token
+		logger.Println(string(ColorGreen), fmt.Sprintf("Getting token %d", tokenId), string(ColorReset))
+		getToken(client, collectionSlug, tokenId, &freqMap, tokenMap)
+	}
 
-// 	}
-// 	return rank
-// }
+	// TODO: move this to the http request logic
+	traitOccurences := buildTraitFrequencyMap(tokenMap)
+
+	// "copy lock value" warning is inconsequential here, since all ops are sequential.
+	return traitOccurences
+}

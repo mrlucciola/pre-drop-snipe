@@ -23,6 +23,15 @@ type TraitValueFreqMap struct {
 	values map[string]int
 }
 
+// # A collection of trait value frequencies, ordered by category
+//
+// Trait-category maps contain maps for trait-values map[traitValueStr]int
+// Trait-value maps contain each value's frequency - the amount of appearances in a list of tokens.
+type TraitFrequencyMap struct {
+	mu     sync.RWMutex
+	groups map[string]*TraitValueFreqMap
+}
+
 // # Holds the rarity scores for each individual trait value.
 //
 // 1. Multiply the trait frequency by # of trait values within group
@@ -36,6 +45,9 @@ type TraitValueFreqMap struct {
 //	}
 type TraitValueScoreMap map[string]decimal.Decimal
 
+// # Trait rarity scores, by category.
+type TraitScoreMap map[string]TraitValueScoreMap
+
 // # Probability map for trait values of a single group.
 //
 // Trait value probabilities are calculated from the frequency mapping.
@@ -48,46 +60,17 @@ type TraitValueScoreMap map[string]decimal.Decimal
 //	}
 type TraitValueProbMap map[string]decimal.Decimal
 
-// # A collection of trait value frequencies, ordered by category
-//
-// Trait-category maps contain maps for trait-values map[traitValueStr]int
-// Trait-value maps contain each value's frequency - the amount of appearances in a list of tokens.
-type TraitFrequencyMap struct {
-	mu     sync.RWMutex
-	groups map[string]*TraitValueFreqMap
-}
-
 // # Probabilities for all traits.
 type TraitProbabilityMap map[string]TraitValueProbMap
 
-// # Trait rarity scores, by category.
-type TraitScoreMap map[string]TraitValueScoreMap
+// # Parent struct. Holds all stats about tokens.
+type TraitStatMap struct {
+	freq  TraitFrequencyMap
+	prob  TraitProbabilityMap
+	score TraitScoreMap
+}
 
 const initPrecision = 0
-
-// DEPRECATED
-// # Build the trait frequency map
-// TODO: parallelize if possible
-func buildTraitFrequencyMap(tokenArr []Token) TraitFrequencyMap {
-	// traitOccurences := make(TraitFrequencyMap)
-	traitOccurences := TraitFrequencyMap{groups: make(map[string]*TraitValueFreqMap)}
-
-	for _, token := range tokenArr {
-
-		// iterate thru the traits, add occurences to the map
-		for traitGroup, traitValue := range token.traits {
-			if _, found := traitOccurences.groups[traitGroup]; !found {
-				traitOccurences.groups[traitGroup] = &TraitValueFreqMap{values: make(map[string]int)}
-			}
-
-			// handle concurrent access
-			traitOccurences.groups[traitGroup].mu.Lock()
-			traitOccurences.groups[traitGroup].values[traitValue] += 1
-			traitOccurences.groups[traitGroup].mu.Unlock()
-		}
-	}
-	return traitOccurences
-}
 
 /*
 Build a mapping of all probabilities for all possible traits assignable to a token.
@@ -100,7 +83,7 @@ Iterate through the list of tokens pulled from the Skip Protocol API and
 build a frequency map for each trait as they appear.
   - Input is `Token` array - from Skip Protocol API
 */
-func buildTraitProbabilityMap(tokenArr []Token, traitOccurences *TraitFrequencyMap) TraitProbabilityMap {
+func buildTraitProbabilityMap(traitOccurences *TraitFrequencyMap) TraitProbabilityMap {
 
 	// TODO: parallelize if possible
 	traitProbabilities := make(TraitProbabilityMap)
@@ -140,7 +123,7 @@ build a frequency map for each trait as they appear.
 
 Relies on the trait frequency map to be calculated
 */
-func buildTraitScoreMap(tokenArr []Token, traitOccurences *TraitFrequencyMap) TraitScoreMap {
+func buildTraitScoreMap(traitOccurences *TraitFrequencyMap) TraitScoreMap {
 
 	// TODO: parallelize if possible
 	traitScores := make(TraitScoreMap)
@@ -161,6 +144,30 @@ func buildTraitScoreMap(tokenArr []Token, traitOccurences *TraitFrequencyMap) Tr
 	}
 
 	return traitScores
+}
+
+// DEPRECATED
+//
+// # Build the trait frequency map
+// TODO: parallelize if possible
+func buildTraitFrequencyMap(tokenMap *TokensMap) TraitFrequencyMap {
+	traitOccurences := TraitFrequencyMap{groups: make(map[string]*TraitValueFreqMap)}
+
+	for _, token := range tokenMap.v {
+
+		// iterate thru the traits, add occurences to the map
+		for traitGroup, traitValue := range token.traits {
+			if _, found := traitOccurences.groups[traitGroup]; !found {
+				traitOccurences.groups[traitGroup] = &TraitValueFreqMap{values: make(map[string]int)}
+			}
+
+			// handle concurrent access
+			traitOccurences.groups[traitGroup].mu.Lock()
+			traitOccurences.groups[traitGroup].values[traitValue] += 1
+			traitOccurences.groups[traitGroup].mu.Unlock()
+		}
+	}
+	return traitOccurences
 }
 
 // DEPRECATED

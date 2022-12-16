@@ -59,10 +59,10 @@ func calculateTokenRarityScore(tokenToEval Token, rarityScoreMap TraitScoreMap, 
 // # Returns array of token rarities, in the order indexible by token.id
 //
 // Array is not sorted
-func calculateTokensRarity(tokensToEval []Token, probabilityMap TraitProbabilityMap) []TokenRarity {
+func calculateTokensRarity(probabilityMap TraitProbabilityMap, tokensToEval *TokensMap) []TokenRarity {
 	// temporary: filter empty tokens out of array
 	filteredMap := make(map[string]Token)
-	for _, token := range tokensToEval {
+	for _, token := range tokensToEval.v {
 		// if token's trait struct is empty, ignore
 		if len(token.traits) > 0 {
 			idStr := fmt.Sprintf("%d", token.id)
@@ -77,7 +77,7 @@ func calculateTokensRarity(tokensToEval []Token, probabilityMap TraitProbability
 	// init arr
 	tokenRarityArr := make([]TokenRarity, len(filteredMap))
 	// parallelize?
-	for _, token := range tokensToEval {
+	for _, token := range tokensToEval.v {
 		calculateTokenRarity(token, probabilityMap, tokenRarityArr)
 	}
 
@@ -91,25 +91,12 @@ func calculateTokensRarity(tokensToEval []Token, probabilityMap TraitProbability
 // # Returns array of token rarity scores, in the order indexible by token.id
 //
 // Array is not sorted
-func calculateTokensRarityScores(tokensToEval []Token, rarityScoreMap TraitScoreMap) []TokenRarity {
-	// temporary: filter empty tokens out of array
-	filteredMap := make(map[string]Token)
-	for _, token := range tokensToEval {
-		// if token's trait struct is empty, ignore
-		if len(token.traits) > 0 {
-			idStr := fmt.Sprintf("%d", token.id)
-			filteredMap[idStr] = token
-		}
-	}
-	filteredTokenArr := make([]Token, len(filteredMap))
-	for _, token := range filteredMap {
-		filteredTokenArr[token.id] = token
-	}
-
+func calculateTokensRarityScores(rarityScoreMap TraitScoreMap, tokenMap *TokensMap) []TokenRarity {
 	// init arr
-	tokenRarityArr := make([]TokenRarity, len(filteredMap))
+	tokenRarityArr := make([]TokenRarity, len(tokenMap.v))
 	// parallelize?
-	for _, token := range tokensToEval {
+	// we don't need to get a read lock for this. no writes for the rest of the program.
+	for _, token := range tokenMap.v {
 		calculateTokenRarityScore(token, rarityScoreMap, tokenRarityArr)
 	}
 
