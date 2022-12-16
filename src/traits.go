@@ -1,5 +1,7 @@
 package main
 
+import "github.com/shopspring/decimal"
+
 // Frequency map for trait values of a single group
 //
 // Shows the occurrences of each trait.
@@ -24,37 +26,39 @@ type TraitValueFreqMap map[string]int
 //	  "m1 bored unshaven": 0.3087 (2257 / 7311),
 //	  "m1 dumbfounded":    0.1025 ( 750 / 7311),
 //	}
-type TraitValueProbMap map[string]float64
+type TraitValueProbMap map[string]decimal.Decimal
 
 type TraitFrequencyMap map[string]TraitValueFreqMap
 
 // Probabilities for all traits
 type TraitProbabilityMap map[string]TraitValueProbMap
 
+const initPrecision = 0
+
 // DEPRECATED
 //
 // # Calculate trait value probabilities, by group
 //
 // Input the frequency for the trait values of a single group & return its probability mapping
-func calcTraitValueProbsByGroup(traitGroup TraitValueFreqMap, activeTokenCount int) TraitValueProbMap {
-	// get sum of all occurences
-	var traitOccurrenceSum int
+// func calcTraitValueProbsByGroup(traitGroup TraitValueFreqMap, activeTokenCount int) TraitValueProbMap {
+// 	// get sum of all occurences
+// 	var traitOccurrenceSum int
 
-	// TODO: parallelize
-	// m1 dumbfounded + m2 bored + m1 bored + m1 bored unshaven...
-	for _, traitValueOccurrence := range traitGroup {
-		traitOccurrenceSum += traitValueOccurrence
-	}
+// 	// TODO: parallelize
+// 	// m1 dumbfounded + m2 bored + m1 bored + m1 bored unshaven...
+// 	for _, traitValueOccurrence := range traitGroup {
+// 		traitOccurrenceSum += traitValueOccurrence
+// 	}
 
-	traitGroupProb := TraitValueProbMap{}
-	// now that we have the sum, apply probability to each trait value
-	for traitValue, traitValueOccurrence := range traitGroup {
-		prob := float64(traitValueOccurrence) / float64(traitOccurrenceSum)
-		traitGroupProb[traitValue] = prob
-	}
+// 	traitGroupProb := TraitValueProbMap{}
+// 	// now that we have the sum, apply probability to each trait value
+// 	for traitValue, traitValueOccurrence := range traitGroup {
+// 		prob := float64(traitValueOccurrence) / float64(traitOccurrenceSum)
+// 		traitGroupProb[traitValue] = prob
+// 	}
 
-	return traitGroupProb
-}
+// 	return traitGroupProb
+// }
 
 // DEPRECATED: update test
 // Calculate the probabilities for all traits for the token collection in its current state.
@@ -64,16 +68,16 @@ func calcTraitValueProbsByGroup(traitGroup TraitValueFreqMap, activeTokenCount i
 // Sources info from Skip Protocol's database.
 //
 // Note: OpenSea has a lack of consistency for contract versions with Akuri.
-func calcAllTraitValueProbs(traits TraitFrequencyMap, activeTokenCount int) TraitProbabilityMap {
-	probMap := TraitProbabilityMap{}
+// func calcAllTraitValueProbs(traits TraitFrequencyMap, activeTokenCount int) TraitProbabilityMap {
+// 	probMap := TraitProbabilityMap{}
 
-	// TODO: parallelize
-	for groupName, group := range traits {
-		probMap[groupName] = calcTraitValueProbsByGroup(group, int(activeTokenCount))
-	}
+// 	// TODO: parallelize
+// 	for groupName, group := range traits {
+// 		probMap[groupName] = calcTraitValueProbsByGroup(group, int(activeTokenCount))
+// 	}
 
-	return probMap
-}
+// 	return probMap
+// }
 
 // Build the trait frequency map
 // TODO: parallelize if possible
@@ -121,13 +125,14 @@ func buildTraitProbabilityMap(tokenArr []Token, activeTokenCount int) TraitProba
 
 		// handle empty properties
 		if _, found := traitProbabilities[traitGroup]; !found {
-			traitProbabilities[traitGroup] = TraitValueProbMap{}
+			traitProbabilities[traitGroup] = make(TraitValueProbMap)
 		}
 
 		// iter thru each value, divide to get prob for each value, assign to map
 		// TODO: parallelize if possible
 		for traitValue, valueCt := range traitValueMap {
-			traitProbabilities[traitGroup][traitValue] = float64(valueCt) / float64(groupSum)
+			val := decimal.New(int64(valueCt), initPrecision).Div(decimal.New(int64(groupSum), initPrecision))
+			traitProbabilities[traitGroup][traitValue] = val
 		}
 	}
 

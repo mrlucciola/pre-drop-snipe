@@ -31,15 +31,9 @@ func main() {
 
 	tokenRarityArr := calculateTokensRarity(tokens, probMap)
 
-	for _, token := range tokens {
-		token.lookupRarityRank(tokenRarityArr)
-	}
-
 	// sort
 	sortedArr := sortRarityArr(tokenRarityArr)
-	for _, token := range sortedArr {
-		fmt.Println("sorted", token)
-	}
+
 	// Display the top five
 	fmt.Println(sortedArr[:5])
 }
