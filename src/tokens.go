@@ -14,6 +14,19 @@ import (
 
 const baseUrlToken = "https://go-challenge.skip.money"
 
+// Map of trait group to value
+//
+// Data structure containing all of the traits for a single token
+//
+//	ex. traitValueMap: {
+//	 "Background": "Off White A",
+//	 "Clothing":   "Pink Oversized Kimono",
+//	 "Eyes":       "Striking",
+//	 "Offhand":    "Monkey King Staff",
+//	 "Type":       "Human",
+//	 "Hair":       "Water",
+//	 "Mouth":      "Frown",
+//	}
 type TraitValueMap map[string]string
 
 // We do not put the rarity on this class because it would require
@@ -23,7 +36,6 @@ type TraitValueMap map[string]string
 type Token struct {
 	id     int
 	traits TraitValueMap
-	// traits sync.Map
 }
 
 // ## Look up the current token's rarity in the rarity array
@@ -48,11 +60,9 @@ func calcRankOpt(searchValue decimal.Decimal, tokenRarityArr []TokenRarity) int 
 	for p1 := 0; p1 < arrEndIdx; p1++ {
 		p2--
 
-		// if tokenRarityArr[p1].rarity != searchValue && tokenRarityArr[p1].rarity < searchValue {
 		if tokenRarityArr[p1].rarity != searchValue && tokenRarityArr[p1].rarity.LessThan(searchValue) {
 			rank++
 		}
-		// if tokenRarityArr[p2].rarity != searchValue && tokenRarityArr[p2].rarity < searchValue {
 		if tokenRarityArr[p2].rarity != searchValue && tokenRarityArr[p2].rarity.LessThan(searchValue) {
 			rank++
 		}
@@ -60,7 +70,6 @@ func calcRankOpt(searchValue decimal.Decimal, tokenRarityArr []TokenRarity) int 
 
 	// if arr length is not even, eval the middle arr item
 	if isOdd {
-		// if tokenRarityArr[arrEndIdx+1].rarity != searchValue && tokenRarityArr[arrEndIdx+1].rarity < searchValue {
 		if tokenRarityArr[arrEndIdx+1].rarity != searchValue && tokenRarityArr[arrEndIdx+1].rarity.LessThan(searchValue) {
 			rank++
 		}
@@ -69,7 +78,7 @@ func calcRankOpt(searchValue decimal.Decimal, tokenRarityArr []TokenRarity) int 
 	return rank
 }
 
-// Sort the array and search for the index (i.e. rank) using the rarity value.
+// ## Sort the array and search for the index (i.e. rank) using the rarity value.
 //
 // All algos in the go::sort package are `O(n log n)`
 //
@@ -83,7 +92,7 @@ func (thisToken Token) lookupRarityRank(tokenRarityArr []TokenRarity) int {
 	return rank
 }
 
-// Makes GET request to Skip's servers, retrieves asset
+// ## Makes GET request to Skip's servers, retrieves asset
 //
 // From the stub script
 func getToken(client *http.Client, collectionSlug string, tokenId int) Token {
@@ -119,13 +128,13 @@ func getToken(client *http.Client, collectionSlug string, tokenId int) Token {
 	}
 }
 
-// Retrieve all tokens for a given collection
+// ## Fetch all tokens for a given collection, without concurrency
 //
 // 1. Get the amount of total available tokens (normally would be from OpenSea collection stats)
 //
 // 2. Iterate through this range to get the collection's tokens
-func getTokens(collectionSlug string, tokenCt int) []Token {
-	tokenArr := make([]Token, tokenCt)
+func getTokens(collectionSlug string, tokenArr []Token) {
+	tokenCt := len(tokenArr)
 	client := &http.Client{}
 
 	for tokenId := 0; tokenId < tokenCt; tokenId++ {
@@ -135,10 +144,13 @@ func getTokens(collectionSlug string, tokenCt int) []Token {
 		// add to the array
 		tokenArr[tokenId] = token
 	}
-
-	return tokenArr
 }
 
+// ## Fetch all tokens for a given collection, using concurrency
+//
+// 1. Get the amount of total available tokens (normally would be from OpenSea collection stats)
+//
+// 2. Iterate through this range to get the collection's tokens
 func getTokensConcurrently(collectionSlug string, tokenArr []Token) {
 	jobCt := len(tokenArr)
 	workerCt := 2000

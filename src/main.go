@@ -1,10 +1,8 @@
 package main
 
-import (
-	"fmt"
-)
+import "fmt"
 
-// https://opensea.io/collection/azuki1
+// https://opensea.io/collection/we-asuki
 // var collectionSlug = "we-asuki"
 var tokenSlug = "azuki1"
 
@@ -14,26 +12,35 @@ const COLOR_RED = "\033[31m"
 const COLOR_RESET = "\033[0m"
 
 func main() {
-	// client := httpClient()
-	// res := getOsCollection(client, collectionSlug)
-
 	// preallocate an array - as long as we know up front how many tokens we need to call
 	// we can store using their id as this array's index
 	tokens := make([]Token, 10000)
 
 	// retrieve tokens from server
-	// tokens := getTokens(tokenSlug, int(10))
-	getTokensConcurrently(tokenSlug, tokens)
+	useConcurrency := true
+	if useConcurrency {
+		getTokensConcurrently(tokenSlug, tokens)
+	} else {
+		getTokens(tokenSlug, tokens)
+	}
 
-	// create probability map
-	// TODO: move in to the concurrent logic
-	probMap := buildTraitProbabilityMap(tokens, len(tokens))
+	var tokenRarityArr []TokenRarity
+	useRarityScore := true
+	if useRarityScore {
+		// TODO: move in to the concurrent logic
+		rarityScoreMap := buildTraitScoreMap(tokens, len(tokens))
+		tokenRarityArr = calculateTokensRarityScores(tokens, rarityScoreMap)
 
-	tokenRarityArr := calculateTokensRarity(tokens, probMap)
+	} else {
+		probMap := buildTraitProbabilityMap(tokens, len(tokens))
+		tokenRarityArr = calculateTokensRarity(tokens, probMap)
+	}
 
 	// sort
 	sortedArr := sortRarityArr(tokenRarityArr)
 
 	// Display the top five
-	fmt.Println(sortedArr[:5])
+	for _, v := range sortedArr[:5] {
+		fmt.Println(v.id, v.rarity.StringFixed(20))
+	}
 }

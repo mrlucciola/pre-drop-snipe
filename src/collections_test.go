@@ -28,8 +28,7 @@ func TestRetrieveCollection(t *testing.T) {
 		Count:  73750,
 	}
 
-	client := httpClient()
-	output := getOsCollection(client, "we-asuki")
+	output := getOsCollection("we-asuki")
 
 	if reflect.DeepEqual(expected, output) == false {
 
