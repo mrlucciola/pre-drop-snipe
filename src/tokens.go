@@ -94,8 +94,10 @@ func (thisToken Token) lookupRarityRank(tokenRarityArr []TokenRarity) int {
 
 // ## Makes GET request to Skip's servers, retrieves asset
 //
-// From the stub script
-func getToken(client *http.Client, collectionSlug string, tokenId int) Token {
+// # From the stub script
+//
+// After receiving value from request, update frequency map
+func getToken(client *http.Client, collectionSlug string, tokenId int, freqMap TraitFrequencyMap) Token {
 	// build the endpoint string
 	url := fmt.Sprintf("%s/%s/%d.json", baseUrlToken, collectionSlug, tokenId)
 
@@ -121,11 +123,22 @@ func getToken(client *http.Client, collectionSlug string, tokenId int) Token {
 
 	// deserialize token's traits from the response body's byte arr into our map
 	json.Unmarshal(body, &traits)
-
-	return Token{
+	token := Token{
 		id:     tokenId,
 		traits: traits,
 	}
+
+	// NEW: update the trait value map
+	// iterate thru the traits, add occurences to the map
+	for traitGroup, traitValue := range token.traits {
+		if _, found := freqMap[traitGroup]; !found {
+			freqMap[traitGroup] = TraitValueFreqMap{}
+		}
+
+		freqMap[traitGroup][traitValue] += 1
+	}
+
+	return token
 }
 
 // ## Fetch all tokens for a given collection, without concurrency
@@ -133,17 +146,23 @@ func getToken(client *http.Client, collectionSlug string, tokenId int) Token {
 // 1. Get the amount of total available tokens (normally would be from OpenSea collection stats)
 //
 // 2. Iterate through this range to get the collection's tokens
-func getTokens(collectionSlug string, tokenArr []Token) {
+func getTokens(collectionSlug string, tokenArr []Token) TraitFrequencyMap {
 	tokenCt := len(tokenArr)
 	client := &http.Client{}
+	freqMap := make(TraitFrequencyMap)
 
 	for tokenId := 0; tokenId < tokenCt; tokenId++ {
 		// log the token
 		logger.Println(string(COLOR_GREEN), fmt.Sprintf("Getting token %d", tokenId), string(COLOR_RESET))
-		token := getToken(client, collectionSlug, tokenId)
+		token := getToken(client, collectionSlug, tokenId, freqMap)
 		// add to the array
 		tokenArr[tokenId] = token
 	}
+
+	// TODO: move this to the http request logic
+	traitOccurences := buildTraitFrequencyMap(tokenArr)
+
+	return traitOccurences
 }
 
 // ## Fetch all tokens for a given collection, using concurrency
@@ -151,8 +170,11 @@ func getTokens(collectionSlug string, tokenArr []Token) {
 // 1. Get the amount of total available tokens (normally would be from OpenSea collection stats)
 //
 // 2. Iterate through this range to get the collection's tokens
-func getTokensConcurrently(collectionSlug string, tokenArr []Token) {
+func getTokensConcurrently(collectionSlug string, tokenArr []Token) TraitFrequencyMap {
 	jobCt := len(tokenArr)
+	// init frequency map
+	freqMap := make(TraitFrequencyMap)
+	// set up workers and job pool
 	workerCt := 2000
 	transport := &http.Transport{
 		ResponseHeaderTimeout: time.Hour,
@@ -172,7 +194,7 @@ func getTokensConcurrently(collectionSlug string, tokenArr []Token) {
 			defer wg.Done()
 			for jobId := range jobChannel {
 				// assign incoming token data to the pre-allocated array
-				tokenArr[jobId] = getToken(client, collectionSlug, jobId)
+				tokenArr[jobId] = getToken(client, collectionSlug, jobId, freqMap)
 			}
 
 		}(workerId, &waitGroup)
@@ -186,6 +208,11 @@ func getTokensConcurrently(collectionSlug string, tokenArr []Token) {
 	close(jobChannel)
 	waitGroup.Wait()
 	fmt.Println("(done) \n1  ", tokenArr[:5], "\n2  ", tokenArr[len(tokenArr)/2:5+len(tokenArr)/2], "\n3  ", tokenArr[len(tokenArr)-5:])
+
+	// TODO: move this to the http request logic
+	traitOccurences := buildTraitFrequencyMap(tokenArr)
+
+	return traitOccurences
 }
 
 // DEPRECATED
