@@ -21,9 +21,9 @@ func calculateTokenRarity(tokenToEval Token, probabilityMap TraitProbabilityMap,
 
 	// iterate thru each trait on the token
 	// TODO: parallelize if possible
-	for traitGroup, traitValue := range tokenToEval.traits {
+	for traitCategory, traitValue := range tokenToEval.traits {
 		// look up value in the map
-		prob = probabilityMap[traitGroup][traitValue].Mul(prob)
+		prob = probabilityMap[traitCategory][traitValue].Mul(prob)
 	}
 
 	// add to datastore
@@ -41,9 +41,9 @@ func calculateTokenRarityScore(tokenToEval Token, rarityScoreMap TraitScoreMap, 
 
 	// iterate thru each trait on the token
 	// TODO: parallelize if possible
-	for traitGroup, traitValue := range tokenToEval.traits {
+	for traitCategory, traitValue := range tokenToEval.traits {
 		// look up value in the map
-		rarityScore = rarityScoreMap[traitGroup][traitValue].Add(rarityScore)
+		rarityScore = rarityScoreMap[traitCategory][traitValue].Add(rarityScore)
 	}
 
 	// add to datastore

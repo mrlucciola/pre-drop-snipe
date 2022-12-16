@@ -17,7 +17,7 @@ func main() {
 	// Check the collection size
 	collectionSize := 10000
 	freqMap := TraitFrequencyMap{
-		groups: make(map[string]*TraitValueFreqMap),
+		categories: make(map[string]*TraitValueFreqMap),
 	}
 	tokenMap := TokensMap{v: make(map[int]Token)}
 

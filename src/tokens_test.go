@@ -8,7 +8,7 @@ import (
 func TestRetrieveToken(t *testing.T) {
 	expected := Token{
 		id: 0,
-		traits: TraitValueMap{
+		traits: TokenTraitMap{
 			"Background": "Off White A",
 			"Clothing":   "Pink Oversized Kimono",
 			"Eyes":       "Striking",
@@ -33,7 +33,7 @@ func TestRetrieveTokens(t *testing.T) {
 	expected := []*Token{
 		{
 			id: 0,
-			traits: TraitValueMap{
+			traits: TokenTraitMap{
 				"Background": "Off White A",
 				"Clothing":   "Pink Oversized Kimono",
 				"Eyes":       "Striking",
@@ -45,7 +45,7 @@ func TestRetrieveTokens(t *testing.T) {
 		},
 		{
 			id: 1,
-			traits: TraitValueMap{
+			traits: TokenTraitMap{
 				"Background": "Off White D",
 				"Clothing":   "White Qipao with Fur",
 				"Eyes":       "Daydreaming",

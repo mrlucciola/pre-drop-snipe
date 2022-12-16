@@ -23,9 +23,7 @@ type TokensMap struct {
 	v  map[int]Token
 }
 
-// type TokensMap sync.Map
-
-// Map of trait group to value
+// Map of trait category to value
 //
 // Data structure containing all of the traits for a single token
 //
@@ -38,7 +36,7 @@ type TokensMap struct {
 //	 "Hair":       "Water",
 //	 "Mouth":      "Frown",
 //	}
-type TraitValueMap map[string]string
+type TokenTraitMap map[string]string
 
 // # Holds information about a single token of a single collection relevant to ranking
 //
@@ -54,7 +52,7 @@ type TraitValueMap map[string]string
 // Use lookup table to find rarity.
 type Token struct {
 	id     int
-	traits TraitValueMap
+	traits TokenTraitMap
 }
 
 // # Look up the current token's rarity in the rarity array
@@ -137,7 +135,7 @@ func getToken(client *http.Client, collectionSlug string, tokenId int, freqMap *
 	}
 
 	// init the trait map
-	traits := make(TraitValueMap)
+	traits := make(TokenTraitMap)
 
 	// deserialize token's traits from the response body's byte arr into our map
 	json.Unmarshal(body, &traits)
@@ -148,19 +146,19 @@ func getToken(client *http.Client, collectionSlug string, tokenId int, freqMap *
 
 	// NEW: update the trait value map
 	// iterate thru the traits, add occurences to the map
-	for traitGroup, traitValue := range token.traits {
+	for traitCategory, traitValue := range token.traits {
 		// add traits to the map
-		if _, found := freqMap.groups[traitGroup]; !found {
-			// data race: if two threads wanted to create a group and didnt know about each other, one would overwrite the other's data
+		if _, found := freqMap.categories[traitCategory]; !found {
+			// data race: if two threads wanted to create a category and didnt know about each other, one would overwrite the other's data
 			// handle concurrent access
 			freqMap.mu.Lock()
-			freqMap.groups[traitGroup] = &TraitValueFreqMap{values: make(map[string]int)}
+			freqMap.categories[traitCategory] = &TraitValueFreqMap{values: make(map[string]int)}
 			freqMap.mu.Unlock()
 		}
 		// handle concurrent access
-		freqMap.groups[traitGroup].mu.Lock()
-		freqMap.groups[traitGroup].values[traitValue] += 1
-		freqMap.groups[traitGroup].mu.Unlock()
+		freqMap.categories[traitCategory].mu.Lock()
+		freqMap.categories[traitCategory].values[traitValue] += 1
+		freqMap.categories[traitCategory].mu.Unlock()
 	}
 
 	// NEW: add to token map
@@ -187,7 +185,7 @@ func getTokensConcurrently(collectionSlug string, freqMap *TraitFrequencyMap, to
 	}
 	client := &http.Client{Transport: transport}
 
-	// init job channel and wait group
+	// init job channel and wait category
 	jobChannel := make(chan int)
 	var waitGroup sync.WaitGroup
 
@@ -222,7 +220,7 @@ func getTokens(collectionSlug string, tokenMap *TokensMap) TraitFrequencyMap {
 	tokenCt := len(tokenMap.v)
 	client := &http.Client{}
 	// var rwMu sync.RWMutex
-	freqMap := TraitFrequencyMap{groups: make(map[string]*TraitValueFreqMap)}
+	freqMap := TraitFrequencyMap{categories: make(map[string]*TraitValueFreqMap)}
 
 	for tokenId := 0; tokenId < tokenCt; tokenId++ {
 		// log the token
