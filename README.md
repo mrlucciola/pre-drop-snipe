@@ -28,6 +28,24 @@ ________________________________
 
 ________________________________
 
+## Concurrency Error
+
+I was receiving +300,000-line error logs when attempting concurrently call 10,000 endpoints, with and without
+breaking down these requests into 1000-call chunks.
+
+log: 
+```
+runtime/cgo: pthread_create failed: Resource temporarily unavailable
+SIGABRT: abort
+PC=0x7ff80e2c530e m=2256 sigcode=0
+
+goroutine 0 [idle]:
+runtime: g 0: unknown pc 0x7ff80e2c530e
+stack: frame={sp:0x7000532b3b28, fp:0x0} stack=[0x700053234340,0x7000532b3f40)
+```
+
+
+
 ## Assignment
 
 ### Goal:

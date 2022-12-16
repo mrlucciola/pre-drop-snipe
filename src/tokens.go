@@ -7,16 +7,20 @@ import (
 	"math"
 	"net/http"
 	"sync"
+	"time"
 )
 
 const baseUrlToken = "https://go-challenge.skip.money"
 
-// We do not put the rarity on this class because it updates everytime a new token is minted.
+type TraitValueMap map[string]string
+
+// We do not put the rarity on this class because it would require
+// updating all token structs everytime a new token is minted.
 //
 // Use lookup table to find rarity.
 type Token struct {
 	id     int
-	traits map[string]string
+	traits TraitValueMap
 	// traits sync.Map
 }
 
@@ -24,21 +28,22 @@ func (thisToken Token) lookupRarity(tokenRarityArr []TokenRarity) float64 {
 	return tokenRarityArr[thisToken.id].rarity
 }
 
+// DEPRECATED
 // get the rank - lower probability = higher rank
 // unoptomized
-func calcRankBF(searchValue float64, tokenRarityArr []TokenRarity) int {
-	rank := 1
+// func calcRankBF(searchValue float64, tokenRarityArr []TokenRarity) int {
+// 	rank := 1
 
-	for idx := 0; idx < len(tokenRarityArr); idx++ {
-		lookupValue := tokenRarityArr[idx].rarity
-		// handle duplicates
-		if lookupValue != searchValue && lookupValue < searchValue {
-			rank++
-		}
+// 	for idx := 0; idx < len(tokenRarityArr); idx++ {
+// 		lookupValue := tokenRarityArr[idx].rarity
+// 		// handle duplicates
+// 		if lookupValue != searchValue && lookupValue < searchValue {
+// 			rank++
+// 		}
 
-	}
-	return rank
-}
+// 	}
+// 	return rank
+// }
 
 // get the rank - lower probability = lower index order (i.e. higher rank)
 // optimized using 2 pointers
@@ -86,28 +91,33 @@ func (thisToken Token) lookupRarityRank(tokenRarityArr []TokenRarity) int {
 }
 
 // Makes GET request to Skip's servers, retrieves asset
+//
 // From the stub script
-func getToken(collectionSlug string, tokenId int) Token {
+func getToken(client *http.Client, collectionSlug string, tokenId int) Token {
 	// build the endpoint string
 	url := fmt.Sprintf("%s/%s/%d.json", baseUrlToken, collectionSlug, tokenId)
 
 	// send request
-	res, err := http.Get(url)
+	res, err := client.Get(url)
 
-	// handle res
+	// for now we are handling errors by returning an empty struct
 	if err != nil {
-		logger.Println(string(COLOR_RED), fmt.Sprintf("Error getting token %d :", tokenId), err, string(COLOR_RESET))
 		return Token{}
 	}
 	defer res.Body.Close()
+
+	// read buffer
 	body, err := io.ReadAll(res.Body)
+
+	// for now we are handling errors by returning an empty struct
 	if err != nil {
-		logger.Println(string(COLOR_RED), fmt.Sprintf("Error reading response for token %d :", tokenId), err, string(COLOR_RESET))
 		return Token{}
 	}
 
-	traits := make(map[string]string)
-	// var traits sync.Map
+	// init the trait map
+	traits := make(TraitValueMap)
+
+	// deserialize token's traits from the response body's byte arr into our map
 	json.Unmarshal(body, &traits)
 
 	return Token{
@@ -123,11 +133,12 @@ func getToken(collectionSlug string, tokenId int) Token {
 // 2. Iterate through this range to get the collection's tokens
 func getTokens(collectionSlug string, tokenCt int) []Token {
 	tokenArr := make([]Token, tokenCt)
+	client := &http.Client{}
 
 	for tokenId := 0; tokenId < tokenCt; tokenId++ {
 		// log the token
 		logger.Println(string(COLOR_GREEN), fmt.Sprintf("Getting token %d", tokenId), string(COLOR_RESET))
-		token := getToken(collectionSlug, tokenId)
+		token := getToken(client, collectionSlug, tokenId)
 		// add to the array
 		tokenArr[tokenId] = token
 	}
@@ -135,26 +146,39 @@ func getTokens(collectionSlug string, tokenCt int) []Token {
 	return tokenArr
 }
 
-// func getTokensConcurrently(collectionSlug string, tokenCt int) []Token {
 func getTokensConcurrently(collectionSlug string, tokenArr []Token) {
-	wg := sync.WaitGroup{}
-
-	// tokenArr := make([]Token, tokenCt)
-
-	for tokenId := 0; tokenId < len(tokenArr); tokenId++ {
-		wg.Add(1)
-
-		go func(tid int) {
-			// log the token
-			logger.Println(string(COLOR_GREEN), fmt.Sprintf("Getting token %d", tid), string(COLOR_RESET))
-			token := getToken(collectionSlug, tid)
-			// add to the array
-			tokenArr[tid] = token
-
-			wg.Done()
-		}(tokenId)
+	jobCt := len(tokenArr)
+	workerCt := 2000
+	transport := &http.Transport{
+		ResponseHeaderTimeout: time.Hour,
+		MaxConnsPerHost:       99999,
+		DisableKeepAlives:     true,
 	}
-	wg.Wait()
+	client := &http.Client{Transport: transport}
 
-	// return tokenArr
+	// init job channel and wait group
+	jobChannel := make(chan int)
+	var waitGroup sync.WaitGroup
+
+	for workerId := 0; workerId < workerCt; workerId++ {
+		waitGroup.Add(1)
+
+		go func(wid int, wg *sync.WaitGroup) {
+			defer wg.Done()
+			for jobId := range jobChannel {
+				// assign incoming token data to the pre-allocated array
+				tokenArr[jobId] = getToken(client, collectionSlug, jobId)
+			}
+
+		}(workerId, &waitGroup)
+	}
+
+	// Assign jobs to channel - add jobs to pool
+	for jobId := 0; jobId < jobCt; jobId++ {
+		jobChannel <- jobId
+	}
+
+	close(jobChannel)
+	waitGroup.Wait()
+	fmt.Println("(done) \n1  ", tokenArr[:5], "\n2  ", tokenArr[len(tokenArr)/2:5+len(tokenArr)/2], "\n3  ", tokenArr[len(tokenArr)-5:])
 }
