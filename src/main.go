@@ -25,7 +25,6 @@ func main() {
 		freqMap = getTokens(tokenSlug, tokens)
 	}
 
-	fmt.Println("\n\ngetting rarity\n ")
 	var tokenRarityArr []TokenRarity
 	useRarityScore := true
 	if useRarityScore {
@@ -38,11 +37,9 @@ func main() {
 	}
 
 	// sort
-	fmt.Println("\n\nsorting tokens\n ")
 	sortedArr := sortRarityArr(tokenRarityArr)
 
 	// Display the top five
-	fmt.Println("\n\ndisplaying tokens\n ")
 	for _, v := range sortedArr[:5] {
 		fmt.Println(v.id, v.rarity.StringFixed(20))
 	}
