@@ -1,6 +1,8 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // https://opensea.io/collection/we-asuki
 // var collectionSlug = "we-asuki"
@@ -12,28 +14,34 @@ const ColorRed = "\033[31m"
 const ColorReset = "\033[0m"
 
 func main() {
-	// preallocate an array - as long as we know up front how many tokens we need to call
-	// we can store using their id as this array's index
-	tokens := make([]Token, 10000)
-	freqMap := TraitFrequencyMap{groups: make(map[string]*TraitValueFreqMap)}
+	// Check the collection size
+	collectionSize := 10000
+	freqMap := TraitFrequencyMap{
+		groups: make(map[string]*TraitValueFreqMap),
+	}
+	tokenMap := TokensMap{v: make(map[int]Token)}
 
 	// retrieve tokens from server
 	useConcurrency := true
 	if useConcurrency {
-		getTokensConcurrently(tokenSlug, tokens, &freqMap)
+		getTokensConcurrently(tokenSlug, &freqMap, &tokenMap, collectionSize)
 	} else {
-		freqMap = getTokens(tokenSlug, tokens)
+		freqMap = getTokens(tokenSlug, &tokenMap)
+	}
+	for key, token := range tokenMap.v {
+		fmt.Println(key, token)
 	}
 
 	var tokenRarityArr []TokenRarity
+	// tokenMap := freqMap.tokens.v
 	useRarityScore := true
 	if useRarityScore {
 		// TODO: move in to the concurrent logic
-		rarityScoreMap := buildTraitScoreMap(tokens, &freqMap)
-		tokenRarityArr = calculateTokensRarityScores(tokens, rarityScoreMap)
+		rarityScoreMap := buildTraitScoreMap(&freqMap)
+		tokenRarityArr = calculateTokensRarityScores(rarityScoreMap, &tokenMap)
 	} else {
-		probMap := buildTraitProbabilityMap(tokens, &freqMap)
-		tokenRarityArr = calculateTokensRarity(tokens, probMap)
+		probMap := buildTraitProbabilityMap(&freqMap)
+		tokenRarityArr = calculateTokensRarity(probMap, &tokenMap)
 	}
 
 	// sort

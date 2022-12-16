@@ -7,7 +7,8 @@ import (
 )
 
 // DEPRECATED
-// Query OpenSea's api and get information about the collection and sales
+//
+// # Query OpenSea's api and get information about the collection and sales
 func getOsCollection(collectionSlug string) CollectionPayload {
 	client := httpClient()
 	// base url for the OpenSea API
@@ -34,13 +35,17 @@ func getOsCollection(collectionSlug string) CollectionPayload {
 	}
 }
 
-// Reformatted Collection response body for readability
+// DEPRECATED
+//
+// # Reformatted Collection response body for readability
 type CollectionPayload struct {
 	Traits TraitFrequencyMap
 	Count  float64
 }
 
-// Body of the OpenSea API response for `collection`.
+// DEPRECATED
+//
+// # Body of the OpenSea API response for `collection`.
 //
 // Only includes relevant properties.
 type CollectionResponse struct {
