@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/shopspring/decimal"
 )
 
 const baseUrlToken = "https://go-challenge.skip.money"
@@ -24,31 +26,19 @@ type Token struct {
 	// traits sync.Map
 }
 
-func (thisToken Token) lookupRarity(tokenRarityArr []TokenRarity) float64 {
+// ## Look up the current token's rarity in the rarity array
+func (thisToken Token) lookupRarity(tokenRarityArr []TokenRarity) decimal.Decimal {
 	return tokenRarityArr[thisToken.id].rarity
 }
 
-// DEPRECATED
-// get the rank - lower probability = higher rank
-// unoptomized
-// func calcRankBF(searchValue float64, tokenRarityArr []TokenRarity) int {
-// 	rank := 1
-
-// 	for idx := 0; idx < len(tokenRarityArr); idx++ {
-// 		lookupValue := tokenRarityArr[idx].rarity
-// 		// handle duplicates
-// 		if lookupValue != searchValue && lookupValue < searchValue {
-// 			rank++
-// 		}
-
-// 	}
-// 	return rank
-// }
-
-// get the rank - lower probability = lower index order (i.e. higher rank)
-// optimized using 2 pointers
-// TODO: parallelize
-func calcRankOpt(searchValue float64, tokenRarityArr []TokenRarity) int {
+// # Calculate token rank.
+//
+// Lower probability = lower index order = higher rank.
+//
+// Optimized using 2 pointers.
+//
+// > TODO: parallelize
+func calcRankOpt(searchValue decimal.Decimal, tokenRarityArr []TokenRarity) int {
 	rank := 1
 	arrLen := len(tokenRarityArr)
 	isOdd := arrLen%2 != 0
@@ -58,17 +48,20 @@ func calcRankOpt(searchValue float64, tokenRarityArr []TokenRarity) int {
 	for p1 := 0; p1 < arrEndIdx; p1++ {
 		p2--
 
-		if tokenRarityArr[p1].rarity != searchValue && tokenRarityArr[p1].rarity < searchValue {
+		// if tokenRarityArr[p1].rarity != searchValue && tokenRarityArr[p1].rarity < searchValue {
+		if tokenRarityArr[p1].rarity != searchValue && tokenRarityArr[p1].rarity.LessThan(searchValue) {
 			rank++
 		}
-		if tokenRarityArr[p2].rarity != searchValue && tokenRarityArr[p2].rarity < searchValue {
+		// if tokenRarityArr[p2].rarity != searchValue && tokenRarityArr[p2].rarity < searchValue {
+		if tokenRarityArr[p2].rarity != searchValue && tokenRarityArr[p2].rarity.LessThan(searchValue) {
 			rank++
 		}
 	}
 
 	// if arr length is not even, eval the middle arr item
 	if isOdd {
-		if tokenRarityArr[arrEndIdx+1].rarity != searchValue && tokenRarityArr[arrEndIdx+1].rarity < searchValue {
+		// if tokenRarityArr[arrEndIdx+1].rarity != searchValue && tokenRarityArr[arrEndIdx+1].rarity < searchValue {
+		if tokenRarityArr[arrEndIdx+1].rarity != searchValue && tokenRarityArr[arrEndIdx+1].rarity.LessThan(searchValue) {
 			rank++
 		}
 	}
@@ -84,7 +77,7 @@ func calcRankOpt(searchValue float64, tokenRarityArr []TokenRarity) int {
 //   - Regardless of whether the array is presorted or not, there will always be a O(n) lookup.
 func (thisToken Token) lookupRarityRank(tokenRarityArr []TokenRarity) int {
 	// get the the rarity value
-	searchValue := roundFloat(thisToken.lookupRarity(tokenRarityArr), 15)
+	searchValue := thisToken.lookupRarity(tokenRarityArr)
 	rank := calcRankOpt(searchValue, tokenRarityArr)
 
 	return rank
@@ -182,3 +175,20 @@ func getTokensConcurrently(collectionSlug string, tokenArr []Token) {
 	waitGroup.Wait()
 	fmt.Println("(done) \n1  ", tokenArr[:5], "\n2  ", tokenArr[len(tokenArr)/2:5+len(tokenArr)/2], "\n3  ", tokenArr[len(tokenArr)-5:])
 }
+
+// DEPRECATED
+// get the rank - lower probability = higher rank
+// unoptomized
+// func calcRankBF(searchValue float64, tokenRarityArr []TokenRarity) int {
+// 	rank := 1
+
+// 	for idx := 0; idx < len(tokenRarityArr); idx++ {
+// 		lookupValue := tokenRarityArr[idx].rarity
+// 		// handle duplicates
+// 		if lookupValue != searchValue && lookupValue < searchValue {
+// 			rank++
+// 		}
+
+// 	}
+// 	return rank
+// }
